@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FIRE Tracker Pro - Historical Navigator</title>
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkZJUkUgVHJhY2tlciIsCiAgInNob3J0X25hbWUiOiAiRklSRSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGQwZDBkIiwKICAidGhlbWVfY29sb3IiOiAiIzAwMDAwMCIsCiAgImljb25zIjogW3siInNyYyI6ICJodHRwczovL2Nkbi1pY29ucy1wbmcuZmxhdGljb24uY29tLzUxMi8yNjg0LzI2ODQyMzAucG5nIiwgInR5cGUiOiAiaW1hZ2UvcG5nIiwgInNpemVzIjogIjUxMng1MTIifV0KfQ==">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #050505; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-panel { background: #111; border: 1px solid #333; }
+        
+        .hero-input { background: transparent; border: none; color: white; outline: none; font-weight: 800; padding: 0; margin: 0; width: 100%; }
+        .hero-input:focus { border-bottom: 2px solid #ffd700; }
+        
+        .input-dark { background: #1a1a1a; border: 1px solid #333; color: white; border-radius: 12px; padding: 12px; width: 100%; outline: none; transition: border-color 0.3s; font-size: 1rem; }
+        .input-dark:focus { border-color: #ffd700; }
+        .input-dark:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .accent-gold { color: #ffd700; }
+        input[type="range"] { accent-color: #ffd700; height: 4px; border-radius: 2px; }
+        
+        /* Modèle d'interrupteur Standardisé */
+        .toggle-checkbox:checked { right: 0; border-color: #ffd700; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #ffd700; }
+        
+        .segment-active { background-color: #ffd700; color: #000; box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2); }
+        .segment-inactive { background-color: transparent; color: #9ca3af; }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .progress-ring__circle { transition: stroke-dashoffset 0.35s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        
+        #compass-area { cursor: crosshair; }
+        .grabbing { cursor: grabbing !important; }
+
+        /* Design de l'aiguille stylisé */
+        .needle-shape {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 110px solid #ffd700;
+            position: relative;
+        }
+        .needle-shape::after {
+            content: '';
+            position: absolute;
+            top: 110px;
+            left: -6px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 20px solid rgba(255, 215, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="p-5 pb-24 max-w-md mx-auto">
+
+    <!-- Header -->
+    <div class="mb-6 mt-2 flex justify-between items-end">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Indépendance</h1>
+            <p class="text-gray-500 text-sm font-medium">Trajectoire & Histoire</p>
+        </div>
+    </div>
+
+    <!-- Mode de Calcul Toggle -->
+    <div class="flex p-1 bg-white/5 rounded-xl mb-4 border border-white/10 relative z-10">
+        <button id="btn-mode-age" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-active">Calculer l'Âge</button>
+        <button id="btn-mode-savings" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">Calculer l'Épargne</button>
+    </div>
+
+    <!-- Main Scorecard -->
+    <div class="glass rounded-3xl p-6 mb-6 relative overflow-hidden grid grid-cols-2 gap-4 items-center">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+        <div>
+            <p id="label-scorecard-main" class="text-gray-400 text-[11px] font-bold uppercase tracking-wider mb-2">Liberté estimée</p>
+            <div class="text-5xl font-black accent-gold tracking-tight leading-none" id="mainScoreDisplay">--</div>
+            <p id="unit-scorecard-main" class="text-sm text-gray-500 font-bold mt-1">ans</p>
+        </div>
+        <div class="flex justify-end">
+            <div class="relative w-24 h-24 flex items-center justify-center">
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120">
+                    <circle class="text-gray-800" stroke-width="8" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" />
+                    <circle id="progress-ring" class="text-yellow-500 progress-ring__circle" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" stroke-dasharray="326.72" stroke-dashoffset="326.72" />
+                </svg>
+                <div class="relative flex flex-col items-center justify-center text-center">
+                    <span id="progress-text" class="text-xl font-bold text-white leading-none">0%</span>
+                    <span class="text-[8px] text-gray-500 uppercase font-black tracking-tighter mt-1">Objectif</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. SITUATION ACTUELLE -->
+    <div class="mb-2 px-2 flex justify-between items-center">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">📍 Situation Actuelle</h3>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="glass rounded-2xl p-5">
+            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Âge Actuel</label>
+            <div class="flex items-baseline gap-1 mb-3">
+                <input type="number" id="input-age-hero" class="hero-input text-3xl" value="21" min="1" max="100">
+                <span class="text-xl text-gray-500 font-light">ans</span>
+            </div>
+            <input type="range" id="input-age-slider" min="1" max="100" value="21" class="w-full bg-gray-800 appearance-none cursor-pointer">
+        </div>
+        <div class="glass rounded-2xl p-5">
+            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Patrimoine</label>
+            <div class="flex items-baseline gap-1 mb-3">
+                <input type="number" id="input-initial-hero" class="hero-input text-3xl" value="13000" placeholder="0">
+                <span class="text-lg text-gray-500 font-light">€</span>
+            </div>
+            <input type="range" id="input-initial-slider" min="0" max="500000" step="1000" value="13000" class="w-full bg-gray-800 appearance-none cursor-pointer hover:bg-gray-700 transition">
+        </div>
+    </div>
+
+    <!-- 2. GRAPHIQUE -->
+    <div class="glass rounded-3xl p-4 mb-6 relative">
+        <canvas id="mainChart" style="max-height: 240px;"></canvas>
+    </div>
+
+    <!-- 3. FISCALITÉ & RENDEMENTS -->
+    <div class="glass rounded-2xl p-5 mb-6 border border-yellow-500/30 bg-white/5 space-y-4">
+        <div class="flex justify-between items-center">
+            <div>
+               <label class="text-xs text-gray-400 font-bold block mb-1 uppercase tracking-tight">Fiscalité (Flat Tax 30%)</label>
+               <span class="text-[10px] text-gray-500 block font-medium">Réduit les gains nets de 30%</span>
+            </div>
+            <div class="relative inline-block w-10 h-6 align-middle select-none">
+                <input type="checkbox" id="tax-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5"/>
+                <label for="tax-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+            </div>
+       </div>
+       <div class="grid grid-cols-3 gap-3 pt-2">
+            <div class="text-center">
+                <label class="text-[10px] text-red-400 font-bold block mb-2 uppercase tracking-tighter">Pessimiste</label>
+                <input type="number" id="rate-pess" value="5.0" step="0.1" class="bg-[#1a1a1a] text-white text-center rounded-lg p-2 w-full text-sm font-bold border border-red-900/30">
+            </div>
+            <div class="text-center">
+                <label class="text-[10px] text-green-400 font-bold block mb-2 uppercase tracking-tighter">Neutre</label>
+                <input type="number" id="rate-neut" value="7.0" step="0.1" class="bg-[#1a1a1a] text-white text-center rounded-lg p-2 w-full text-sm font-bold border border-green-900/30">
+            </div>
+            <div class="text-center">
+                <label class="text-[10px] text-blue-400 font-bold block mb-2 uppercase tracking-tighter">Optimiste</label>
+                <input type="number" id="rate-opti" value="10.0" step="0.1" class="bg-[#1a1a1a] text-white text-center rounded-lg p-2 w-full text-sm font-bold border border-blue-900/30">
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Overlay -->
+    <div id="detail-panel" class="hidden glass-panel rounded-2xl p-5 mb-8 fade-in shadow-2xl border border-yellow-500 relative z-10">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-white text-base">Projection : <span id="detail-year" class="text-yellow-500"></span></h3>
+            <button onclick="resetSelection()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full text-white transition">Fermer</button>
+        </div>
+        <div class="space-y-3" id="detail-values">
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-blue-400 font-medium text-xs uppercase tracking-tighter">Optimiste</span>
+                <span id="detail-opti" class="font-bold text-white text-base"></span>
+            </div>
+            <div class="flex justify-between items-center text-sm p-2 bg-white/5 rounded-lg -mx-2">
+                <span class="text-green-400 font-medium text-xs uppercase tracking-tighter">Neutre (Calcul)</span>
+                <span id="detail-neut" class="font-bold text-white text-base"></span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-red-400 font-medium text-xs uppercase tracking-tighter">Pessimiste</span>
+                <span id="detail-pess" class="font-bold text-white text-base"></span>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-[11px]">
+                <span class="text-gray-500 uppercase font-black">Capital Investi (Effort)</span>
+                <span id="detail-invested" class="text-gray-300 font-bold"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stratégie -->
+    <div class="mb-2 px-2">
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">🚀 Stratégie de croissance</h3>
+    </div>
+    <div class="glass rounded-2xl p-5 mb-8 border border-white/5 bg-white/5 space-y-6">
+        <div id="block-savings">
+            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Épargne Mensuelle</label>
+            <div class="flex items-baseline gap-1 mb-1">
+                <input type="number" id="input-savings" class="hero-input text-4xl text-green-400" value="500">
+                <span class="text-2xl text-gray-500 font-light">€</span>
+            </div>
+            <input type="range" id="input-savings-slider" min="0" max="10000" step="50" value="500" class="w-full bg-gray-800 appearance-none cursor-pointer hover:bg-gray-700 transition mt-2">
+        </div>
+        <div id="block-target-age" class="hidden">
+            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Âge de Retraite Visé</label>
+            <div class="flex items-baseline gap-1 mb-1">
+                <input type="number" id="input-target-age" class="hero-input text-4xl text-blue-400" value="50">
+                <span class="text-2xl text-gray-500 font-light">ans</span>
+            </div>
+            <input type="range" id="input-target-age-slider" min="1" max="100" step="1" value="50" class="w-full bg-gray-800 appearance-none cursor-pointer hover:bg-gray-700 transition mt-2">
+        </div>
+        <div class="border-t border-white/10 pt-4">
+            <div class="flex justify-between items-end mb-2">
+                 <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest block">Rente Mensuelle Cible</label>
+                 <span class="text-[9px] text-gray-600 font-bold">Capital: <span id="capital-required-label">750k</span> €</span>
+            </div>
+            <div class="flex items-baseline gap-1">
+                <input type="number" id="input-target-rente" class="hero-input text-3xl text-yellow-500" value="2500">
+                <span class="text-xl text-gray-500 font-light">€ / mois</span>
+            </div>
+            <input type="hidden" id="input-target-capital" value="750000">
+        </div>
+    </div>
+
+    <!-- BOUSSOLE MACRO -->
+    <div class="glass rounded-2xl p-5 mb-8 border border-white/5 bg-gradient-to-b from-[#111] to-[#0a0a0a]">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold text-sm text-gray-300 uppercase tracking-widest text-[11px]">⏰ Horloge de l'Investissement</h3>
+        </div>
+        
+        <!-- Contrôles Macro Standardisés -->
+        <div class="space-y-2 mb-8">
+            <!-- Inflation Standardisé -->
+            <div class="p-3 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
+                <div>
+                   <label class="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tight">Inflation (FR)</label>
+                   <span id="inflation-source-label" class="text-[8px] text-gray-500 block font-medium tracking-tighter italic">Chargement...</span>
+                </div>
+                <div class="flex items-center gap-3">
+                   <div class="relative w-14">
+                        <input type="number" id="input-inflation" value="2.0" step="0.1" class="bg-transparent border-b border-white/10 text-right text-xs py-1 w-full outline-none focus:border-yellow-500 transition-colors" disabled>
+                   </div>
+                   <div class="relative inline-block w-10 h-6 align-middle select-none">
+                       <input type="checkbox" id="inflation-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5" checked/>
+                       <label for="inflation-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+                   </div>
+                </div>
+            </div>
+
+            <!-- Croissance Standardisé -->
+            <div class="p-3 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-wider">Croissance PIB</label>
+                    <span id="growth-source-label" class="text-[8px] text-gray-500 block font-medium tracking-tighter italic">Chargement...</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="compass-growth-val" class="text-xs font-bold text-white">0.8 %</span>
+                    <div class="relative inline-block w-10 h-6 align-middle select-none">
+                        <input type="checkbox" id="growth-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5" checked/>
+                        <label for="growth-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+                    </div>
+                </div>
+            </div>
+            <input type="range" id="compass-growth-slider" min="-3.0" max="5.0" step="0.1" value="0.8" class="hidden">
+        </div>
+
+        <!-- Boussole Visuelle avec Aiguille Redessinée -->
+        <div id="compass-area" class="relative w-64 h-64 mx-auto rounded-full border-4 border-gray-800 bg-black mb-10 shadow-2xl overflow-visible select-none flex items-center justify-center">
+            <!-- Zones -->
+            <div class="absolute top-0 right-0 w-1/2 h-1/2 bg-red-900/10 rounded-tr-full border-b border-l border-white/5"></div>
+            <div class="absolute bottom-0 right-0 w-1/2 h-1/2 bg-orange-900/10 rounded-br-full border-t border-l border-white/5"></div>
+            <div class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-blue-900/10 rounded-bl-full border-t border-r border-white/5"></div>
+            <div class="absolute top-0 left-0 w-1/2 h-1/2 bg-green-900/10 rounded-tl-full border-b border-r border-white/5"></div>
+
+            <!-- Labels Cardinaux -->
+            <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] text-green-500 font-black uppercase tracking-widest">Croissance +</span>
+            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] text-red-500 font-black uppercase tracking-widest">Croissance -</span>
+            <span class="absolute -right-12 top-1/2 -translate-y-1/2 text-[9px] text-green-500 font-black uppercase tracking-widest rotate-90">Inflation +</span>
+            <span class="absolute -left-12 top-1/2 -translate-y-1/2 text-[9px] text-red-500 font-black uppercase tracking-widest -rotate-90">Inflation -</span>
+
+            <!-- Aiguille Premium -->
+            <div id="compass-needle" class="absolute top-1/2 left-1/2 origin-bottom -translate-x-1/2 -translate-y-full transition-transform duration-300 ease-out z-10" style="height: 110px;">
+                <div class="needle-shape"></div>
+            </div>
+            
+            <!-- Pivot Central -->
+            <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-gray-900 rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 z-20 shadow-[0_0_10px_rgba(255,215,0,0.4)]"></div>
+        </div>
+
+        <!-- Analyse Historique -->
+        <div class="bg-black p-5 rounded-2xl border border-white/10 shadow-inner">
+            <div class="flex justify-between items-start mb-2">
+                <h4 id="compass-phase-name" class="font-black text-lg uppercase tracking-tight">Analyse...</h4>
+                <div id="historical-date" class="text-[9px] bg-white/10 px-2 py-1 rounded-full font-bold text-gray-400">---</div>
+            </div>
+            <p id="compass-phase-desc" class="text-[10px] text-gray-500 mb-4 h-10 leading-snug">Interagissez avec la boussole pour explorer.</p>
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3 text-[10px]">
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                        <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[7px]">Actifs</span>
+                        <span id="compass-assets" class="font-bold text-white leading-tight block">-</span>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                        <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[7px]">Secteurs</span>
+                        <span id="compass-sectors" class="font-bold text-white leading-tight block">-</span>
+                    </div>
+                </div>
+                <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/20">
+                    <span class="block text-yellow-500 uppercase font-black mb-1 tracking-widest text-[7px]">Contexte Historique</span>
+                    <span id="compass-history" class="text-[10px] text-gray-400 leading-relaxed block">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestones -->
+    <div class="space-y-3 mb-12">
+        <h3 class="font-bold text-xs uppercase text-gray-500 tracking-widest px-2">Jalons (Neutre)</h3>
+        <div id="milestones" class="space-y-2"></div>
+    </div>
+
+    <div class="border-t border-white/10 pt-6 pb-6 text-center px-4">
+        <p class="text-[10px] text-gray-500 leading-relaxed max-w-xs mx-auto">
+            <strong class="text-gray-400">Coast FIRE :</strong> Cap de patrimoine où les intérêts suffisent à atteindre l'objectif final sans épargne supplémentaire.
+        </p>
+    </div>
+
+    <script>
+        let chart;
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        let calcMode = 'age';
+
+        // Elements
+        const elInitialHero = document.getElementById('input-initial-hero');
+        const elInitialSlider = document.getElementById('input-initial-slider');
+        const elAgeHero = document.getElementById('input-age-hero');
+        const elAgeSlider = document.getElementById('input-age-slider');
+        const elSavings = document.getElementById('input-savings');
+        const elSavingsSlider = document.getElementById('input-savings-slider');
+        const elTargetAge = document.getElementById('input-target-age');
+        const elTargetAgeSlider = document.getElementById('input-target-age-slider');
+        const elTargetRente = document.getElementById('input-target-rente');
+        const elTargetCapital = document.getElementById('input-target-capital');
+        const elCapitalRequiredLabel = document.getElementById('capital-required-label');
+        const elInflationToggle = document.getElementById('inflation-toggle');
+        const elInflationInput = document.getElementById('input-inflation');
+        const elInflationSource = document.getElementById('inflation-source-label');
+        const elTaxToggle = document.getElementById('tax-toggle');
+        const elRatePess = document.getElementById('rate-pess');
+        const elRateNeut = document.getElementById('rate-neut');
+        const elRateOpti = document.getElementById('rate-opti');
+        const elGrowthToggle = document.getElementById('growth-toggle');
+        const elGrowthSource = document.getElementById('growth-source-label');
+        const elGrowthSlider = document.getElementById('compass-growth-slider');
+        const elGrowthValText = document.getElementById('compass-growth-val');
+        const elNeedle = document.getElementById('compass-needle');
+        const elCompassArea = document.getElementById('compass-area');
+
+        let chartDataStore = { labels: [], opti: [], neut: [], pess: [], invested: [] };
+        let selectedYearIndex = null;
+        let isDraggingNeedle = false;
+
+        async function init() {
+            document.getElementById('btn-mode-age').onclick = () => setMode('age');
+            document.getElementById('btn-mode-savings').onclick = () => setMode('savings');
+
+            const sync = (a, b) => {
+                a.oninput = () => { b.value = a.value; calculate(); };
+                b.oninput = () => { a.value = b.value; calculate(); };
+            };
+            sync(elInitialSlider, elInitialHero);
+            sync(elAgeSlider, elAgeHero);
+            sync(elSavingsSlider, elSavings);
+            sync(elTargetAgeSlider, elTargetAge);
+
+            elTargetRente.oninput = () => {
+                const cap = Math.round(elTargetRente.value * 12 * 25);
+                elTargetCapital.value = cap;
+                elCapitalRequiredLabel.innerText = Math.round(cap/1000) + 'k';
+                calculate();
+            };
+
+            [elRatePess, elRateNeut, elRateOpti, elInflationInput].forEach(el => el.oninput = calculate);
+            elTaxToggle.onchange = calculate;
+
+            elInflationToggle.onchange = async () => {
+                elInflationInput.disabled = elInflationToggle.checked;
+                if(elInflationToggle.checked) await fetchInflation();
+                else elInflationSource.innerText = "MANUEL";
+                calculate();
+            };
+
+            elGrowthToggle.onchange = async () => {
+                if(elGrowthToggle.checked) await fetchGrowth();
+                else elGrowthSource.innerText = "MANUEL";
+                updateCompass();
+            };
+
+            // Drag Needle Logic
+            const handleNeedleMove = (e) => {
+                if(!isDraggingNeedle) return;
+                const rect = elCompassArea.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                
+                const dx = clientX - centerX;
+                const dy = clientY - centerY;
+                
+                let inflationVal = 2.0 + (dx / (rect.width/2)) * 3; 
+                let growthVal = 1.5 - (dy / (rect.height/2)) * 3;
+                
+                if(elInflationToggle.checked) { elInflationToggle.checked = false; elInflationInput.disabled = false; elInflationSource.innerText = "MANUEL"; }
+                if(elGrowthToggle.checked) { elGrowthToggle.checked = false; elGrowthSource.innerText = "MANUEL"; }
+                
+                elInflationInput.value = Math.max(-1, Math.min(6, inflationVal)).toFixed(1);
+                elGrowthSlider.value = Math.max(-3, Math.min(6, growthVal)).toFixed(1);
+                elGrowthValText.innerText = parseFloat(elGrowthSlider.value).toFixed(1) + " %";
+                
+                updateCompass();
+                calculate();
+            };
+
+            elCompassArea.addEventListener('mousedown', () => { isDraggingNeedle = true; elCompassArea.classList.add('grabbing'); });
+            window.addEventListener('mouseup', () => { isDraggingNeedle = false; elCompassArea.classList.remove('grabbing'); });
+            window.addEventListener('mousemove', handleNeedleMove);
+            elCompassArea.addEventListener('touchstart', (e) => { isDraggingNeedle = true; handleNeedleMove(e); }, {passive: false});
+            window.addEventListener('touchend', () => isDraggingNeedle = false);
+            window.addEventListener('touchmove', handleNeedleMove, {passive: false});
+
+            await Promise.all([fetchInflation(), fetchGrowth()]);
+            calculate();
+        }
+
+        async function fetchInflation() {
+            if(!elInflationToggle.checked) return;
+            elInflationSource.innerText = "Connexion...";
+            try {
+                const res = await fetch('https://api.worldbank.org/v2/country/FR/indicator/FP.CPI.TOTL.ZG?format=json&per_page=5');
+                const data = await res.json();
+                const entry = data[1].find(i => i.value !== null);
+                elInflationInput.value = entry.value.toFixed(1);
+                elInflationSource.innerText = `AUTO (${entry.date})`;
+            } catch(e) {
+                elInflationInput.value = "2.0";
+                elInflationSource.innerText = "AUTO (Défaut)";
+            }
+        }
+
+        async function fetchGrowth() {
+            if(!elGrowthToggle.checked) return;
+            elGrowthSource.innerText = "Connexion...";
+            try {
+                const res = await fetch('https://api.worldbank.org/v2/country/FR/indicator/NY.GDP.MKTP.KD.ZG?format=json&per_page=5');
+                const data = await res.json();
+                const entry = data[1].find(i => i.value !== null);
+                elGrowthSlider.value = entry.value.toFixed(1);
+                elGrowthValText.innerText = elGrowthSlider.value + " %";
+                elGrowthSource.innerText = `AUTO (${entry.date})`;
+            } catch(e) {
+                elGrowthSlider.value = "0.8";
+                elGrowthValText.innerText = "0.8 %";
+                elGrowthSource.innerText = "AUTO (Défaut)";
+            }
+        }
+
+        function setMode(m) {
+            calcMode = m;
+            document.getElementById('btn-mode-age').className = m==='age' ? 'flex-1 py-2 text-[11px] uppercase font-bold rounded-lg segment-active' : 'flex-1 py-2 text-[11px] uppercase font-bold rounded-lg segment-inactive';
+            document.getElementById('btn-mode-savings').className = m==='savings' ? 'flex-1 py-2 text-[11px] uppercase font-bold rounded-lg segment-active' : 'flex-1 py-2 text-[11px] uppercase font-bold rounded-lg segment-inactive';
+            document.getElementById('block-savings').classList.toggle('hidden', m!=='age');
+            document.getElementById('block-target-age').classList.toggle('hidden', m==='age');
+            document.getElementById('label-scorecard-main').innerText = m==='age' ? "Liberté estimée" : "Épargne requise";
+            document.getElementById('unit-scorecard-main').innerText = m==='age' ? "ans" : "€ / mois";
+            calculate();
+        }
+
+        function calculate() {
+            const initial = parseFloat(elInitialHero.value) || 0;
+            const targetCap = parseFloat(elTargetCapital.value) || 750000;
+            const infl = (parseFloat(elInflationInput.value) || 0) / 100;
+            const startAge = parseInt(elAgeHero.value) || 21;
+            const tax = elTaxToggle.checked ? 0.7 : 1.0;
+
+            const rP = (parseFloat(elRatePess.value) / 100) * tax;
+            const rN = (parseFloat(elRateNeut.value) / 100) * tax;
+            const rO = (parseFloat(elRateOpti.value) / 100) * tax;
+
+            let savings = 0;
+            if(calcMode === 'savings') {
+                const targetAge = parseInt(elTargetAge.value) || 50;
+                const months = (targetAge - startAge) * 12;
+                if(months > 0) {
+                    const fv = targetCap * Math.pow(1 + infl, targetAge - startAge);
+                    const rm = rN / 12;
+                    savings = (rm === 0) ? (fv - initial) / months : (fv - initial * Math.pow(1 + rm, months)) * rm / (Math.pow(1 + rm, months) - 1);
+                }
+                document.getElementById('mainScoreDisplay').innerText = Math.round(Math.max(0, savings)).toLocaleString();
+            } else {
+                savings = parseFloat(elSavings.value) || 0;
+            }
+
+            const labels = [];
+            const dN = [], dO = [], dP = [], dI = [];
+            let cN = initial, cO = initial, cP = initial;
+            let fAge = "85+";
+            let found = false;
+
+            for(let i=0; i<=100; i++) {
+                const age = startAge + i;
+                if(age > 100) break;
+                labels.push(age);
+                cN = step(cN, Math.max(0, savings), rN);
+                cO = step(cO, Math.max(0, savings), rO);
+                cP = step(cP, Math.max(0, savings), rP);
+                const totalInvested = initial + (Math.max(0, savings) * 12 * i);
+                dN.push(Math.round(cN)); dO.push(Math.round(cO)); dP.push(Math.round(cP)); dI.push(totalInvested);
+                const currentTarget = targetCap * Math.pow(1 + infl, i);
+                if(!found && cN >= currentTarget) { fAge = age; found = true; }
+            }
+
+            if(calcMode === 'age') document.getElementById('mainScoreDisplay').innerText = fAge;
+            const progress = Math.min(100, Math.max(0, (initial / targetCap) * 100));
+            updateProgress(progress);
+            
+            chartDataStore = { labels, opti: dO, neut: dN, pess: dP, invested: dI };
+            renderChart();
+            renderMilestones(dN, targetCap, startAge, infl);
+            updateCompass();
+            if(selectedYearIndex !== null) updateDetail(selectedYearIndex);
+        }
+
+        function step(c, s, r) {
+            const rm = r / 12;
+            for(let m=0; m<12; m++) c = (c + s) * (1 + rm);
+            return c;
+        }
+
+        function updateCompass() {
+            const infl = parseFloat(elInflationInput.value) || 2.0;
+            const growth = parseFloat(elGrowthSlider.value) || 0.8;
+            const dx = (infl - 2.0) * 3; 
+            const dy = (growth - 1.5) * 3;
+            const angle = Math.atan2(dx, dy) * (180 / Math.PI);
+            elNeedle.style.transform = `translateX(-50%) translateY(-100%) rotate(${angle}deg)`;
+
+            let ph = "", de = "", as = "", se = "", co = "", hi = "", da = "";
+            if(dx >= 0 && dy >= 0) { 
+                ph = "Surchauffe"; co = "text-red-500"; da = "1960s / 2021";
+                de = "Demande > Offre. Les prix s'envolent."; 
+                as = "Matières premières, Immobilier"; se = "Énergie, Matériaux";
+                hi = "Fin des Trente Glorieuses (60s) ou reprise post-COVID (2021) : inflation forte par consommation record.";
+            } else if(dx >= 0 && dy < 0) { 
+                ph = "Stagflation"; co = "text-orange-500"; da = "1973-1979";
+                de = "Croissance faible, prix élevés."; 
+                as = "Cash, Or, Obligations courtes"; se = "Santé, Services Publics";
+                hi = "Chocs pétroliers des années 70 : économie stagnante alors que l'énergie explose l'inflation.";
+            } else if(dx < 0 && dy < 0) { 
+                ph = "Réflation"; co = "text-blue-500"; da = "2009-2012";
+                de = "Sortie de crise avec taux bas."; 
+                as = "Obligations longues, Croissance"; se = "Finances, Tech";
+                hi = "Lendemain de 2008 : les banques centrales injectent massivement pour relancer la machine.";
+            } else { 
+                ph = "Récupération"; co = "text-green-500"; da = "1950s / 2015";
+                de = "Croissance saine, inflation basse."; 
+                as = "Actions Cycliques, Small Caps"; se = "Industrie, Tech, Conso";
+                hi = "Milieu des Trente Glorieuses (France) : industrialisation massive et monnaie stable.";
+            }
+
+            document.getElementById('compass-phase-name').innerText = ph;
+            document.getElementById('compass-phase-name').className = `font-black text-lg mb-1 uppercase tracking-tight ${co}`;
+            document.getElementById('compass-phase-desc').innerText = de;
+            document.getElementById('compass-assets').innerText = as;
+            document.getElementById('compass-sectors').innerText = se;
+            document.getElementById('compass-history').innerText = hi;
+            document.getElementById('historical-date').innerText = da;
+        }
+
+        function updateProgress(p) {
+            const circle = document.getElementById('progress-ring');
+            const offset = 326.72 - (p / 100) * 326.72;
+            circle.style.strokeDashoffset = offset;
+            document.getElementById('progress-text').innerText = Math.round(p) + "%";
+        }
+
+        function renderChart() {
+            if(chart) {
+                chart.data.labels = chartDataStore.labels;
+                chart.data.datasets[0].data = chartDataStore.opti;
+                chart.data.datasets[1].data = chartDataStore.neut;
+                chart.data.datasets[2].data = chartDataStore.pess;
+                chart.update('none');
+                return;
+            }
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartDataStore.labels,
+                    datasets: [
+                        { label: 'Opti', data: chartDataStore.opti, borderColor: '#3b82f6', borderWeight: 2, pointRadius: 0, tension: 0.4 },
+                        { label: 'Neut', data: chartDataStore.neut, borderColor: '#22c55e', borderWeight: 3, pointRadius: 0, tension: 0.4 },
+                        { label: 'Pess', data: chartDataStore.pess, borderColor: '#ef4444', borderWeight: 2, pointRadius: 0, tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    onClick: (e) => {
+                        const pts = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, true);
+                        if(pts.length) { selectedYearIndex = pts[0].index; updateDetail(selectedYearIndex); chart.update(); }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: { x: { grid: { display: false }, ticks: { color: '#666', font: {size: 10} } }, y: { display: false } }
+                }
+            });
+        }
+
+        function updateDetail(idx) {
+            const year = chartDataStore.labels[idx];
+            document.getElementById('detail-year').innerText = year + " ans";
+            document.getElementById('detail-opti').innerText = chartDataStore.opti[idx].toLocaleString() + " €";
+            document.getElementById('detail-neut').innerText = chartDataStore.neut[idx].toLocaleString() + " €";
+            document.getElementById('detail-pess').innerText = chartDataStore.pess[idx].toLocaleString() + " €";
+            document.getElementById('detail-invested').innerText = chartDataStore.invested[idx].toLocaleString() + " €";
+            document.getElementById('detail-panel').classList.remove('hidden');
+        }
+
+        window.resetSelection = () => { selectedYearIndex = null; document.getElementById('detail-panel').classList.add('hidden'); if(chart) chart.update(); };
+
+        function renderMilestones(data, target, startAge, infl) {
+            const container = document.getElementById('milestones');
+            container.innerHTML = '';
+            const steps = [{l:'Début (10%)', f:0.1, i:'🌱'}, {l:'Coast FIRE (50%)', f:0.5, i:'⚓️'}, {l:'Liberté Totale (100%)', f:1.0, i:'🗽'}];
+            steps.forEach(s => {
+                let age = "100+";
+                for(let i=0; i<data.length; i++) {
+                    if(data[i] >= target * s.f * Math.pow(1+infl, i)) { age = (startAge + i) + " ans"; break; }
+                }
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-4 glass rounded-xl border-l-2 border-white/20";
+                div.innerHTML = `<div class="flex items-center gap-3"><span>${s.i}</span><span class="text-[10px] font-bold uppercase text-gray-300 tracking-tight">${s.l}</span></div><span class="font-black text-sm text-yellow-500">${age}</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
