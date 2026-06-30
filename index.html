@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FIRE Tracker Pro - Historical Navigator</title>
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkZJUkUgVHJhY2tlciIsCiAgInNob3J0X25hbWUiOiAiRklSRSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGQwZDBkIiwKICAidGhlbWVfY29sb3IiOiAiIzAwMDAwMCIsCiAgImljb25zIjogW3siInNyYyI6ICJodHRwczovL2Nkbi1pY29ucy1wbmcuZmxhdGljb24uY29tLzUxMi8yNjg0LzI2ODQyMzAucG5nIiwgInR5cGUiOiAiaW1hZ2UvcG5nIiwgInNpemVzIjogIjUxMng1MTIifV0KfQ==">
+    <title>FIRE Tracker Pro - Ultimate Edition</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
     <style>
         body { background-color: #050505; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
@@ -22,7 +24,7 @@
         .accent-gold { color: #ffd700; }
         input[type="range"] { accent-color: #ffd700; height: 4px; border-radius: 2px; }
         
-        /* Modèle d'interrupteur Standardisé */
+        /* Boutons Toggle (Switch) */
         .toggle-checkbox:checked { right: 0; border-color: #ffd700; }
         .toggle-checkbox:checked + .toggle-label { background-color: #ffd700; }
         
@@ -40,292 +42,389 @@
         #compass-area { cursor: crosshair; }
         .grabbing { cursor: grabbing !important; }
 
-        /* Design de l'aiguille stylisé */
         .needle-shape {
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-bottom: 110px solid #ffd700;
-            position: relative;
+            width: 0; height: 0;
+            border-left: 6px solid transparent; border-right: 6px solid transparent;
+            border-bottom: 90px solid #ffd700; position: relative;
         }
         .needle-shape::after {
-            content: '';
-            position: absolute;
-            top: 110px;
-            left: -6px;
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 20px solid rgba(255, 215, 0, 0.4);
+            content: ''; position: absolute; top: 90px; left: -6px;
+            width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 15px solid rgba(255, 215, 0, 0.4);
+        }
+
+        /* ----- CUSTOM SCROLLBAR FINARY STYLE ----- */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 8px;
+            border: 2px solid #050505;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
         }
     </style>
 </head>
-<body class="p-5 pb-24 max-w-md mx-auto">
+<body class="p-4 md:p-8 max-w-7xl mx-auto">
 
-    <!-- Header -->
-    <div class="mb-6 mt-2 flex justify-between items-end">
+    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-4">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Indépendance</h1>
-            <p class="text-gray-500 text-sm font-medium">Trajectoire & Histoire</p>
-        </div>
-    </div>
-
-    <!-- Mode de Calcul Toggle -->
-    <div class="flex p-1 bg-white/5 rounded-xl mb-4 border border-white/10 relative z-10">
-        <button id="btn-mode-age" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-active">Calculer l'Âge</button>
-        <button id="btn-mode-savings" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">Calculer l'Épargne</button>
-    </div>
-
-    <!-- Main Scorecard -->
-    <div class="glass rounded-3xl p-6 mb-6 relative overflow-hidden grid grid-cols-2 gap-4 items-center">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-        <div>
-            <p id="label-scorecard-main" class="text-gray-400 text-[11px] font-bold uppercase tracking-wider mb-2">Liberté estimée</p>
-            <div class="text-5xl font-black accent-gold tracking-tight leading-none" id="mainScoreDisplay">--</div>
-            <p id="unit-scorecard-main" class="text-sm text-gray-500 font-bold mt-1">ans</p>
-        </div>
-        <div class="flex justify-end">
-            <div class="relative w-24 h-24 flex items-center justify-center">
-                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120">
-                    <circle class="text-gray-800" stroke-width="8" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" />
-                    <circle id="progress-ring" class="text-yellow-500 progress-ring__circle" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" stroke-dasharray="326.72" stroke-dashoffset="326.72" />
-                </svg>
-                <div class="relative flex flex-col items-center justify-center text-center">
-                    <span id="progress-text" class="text-xl font-bold text-white leading-none">0%</span>
-                    <span class="text-[8px] text-gray-500 uppercase font-black tracking-tighter mt-1">Objectif</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 1. SITUATION ACTUELLE -->
-    <div class="mb-2 px-2 flex justify-between items-center">
-        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">📍 Situation Actuelle</h3>
-    </div>
-    <div class="grid grid-cols-2 gap-4 mb-6">
-        <div class="glass rounded-2xl p-5">
-            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Âge Actuel</label>
-            <div class="flex items-baseline gap-1 mb-3">
-                <input type="number" id="input-age-hero" class="hero-input text-3xl" value="21" min="1" max="100">
-                <span class="text-xl text-gray-500 font-light">ans</span>
-            </div>
-            <input type="range" id="input-age-slider" min="1" max="100" value="21" class="w-full bg-gray-800 appearance-none cursor-pointer">
-        </div>
-        <div class="glass rounded-2xl p-5">
-            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Patrimoine</label>
-            <div class="flex items-baseline gap-1 mb-3">
-                <input type="number" id="input-initial-hero" class="hero-input text-3xl" value="13000" placeholder="0">
-                <span class="text-lg text-gray-500 font-light">€</span>
-            </div>
-            <input type="range" id="input-initial-slider" min="0" max="500000" step="1000" value="13000" class="w-full bg-gray-800 appearance-none cursor-pointer hover:bg-gray-700 transition">
-        </div>
-    </div>
-
-    <!-- 2. GRAPHIQUE -->
-    <div class="glass rounded-3xl p-4 mb-6 relative">
-        <canvas id="mainChart" style="max-height: 240px;"></canvas>
-    </div>
-
-    <!-- 3. FISCALITÉ & RENDEMENTS -->
-    <div class="glass rounded-2xl p-5 mb-6 border border-yellow-500/30 bg-white/5 space-y-4">
-        <div class="flex justify-between items-center">
-            <div>
-               <label class="text-xs text-gray-400 font-bold block mb-1 uppercase tracking-tight">Fiscalité (Flat Tax 30%)</label>
-               <span class="text-[10px] text-gray-500 block font-medium">Réduit les gains nets de 30%</span>
-            </div>
-            <div class="relative inline-block w-10 h-6 align-middle select-none">
-                <input type="checkbox" id="tax-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5"/>
-                <label for="tax-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
-            </div>
-       </div>
-       <div class="grid grid-cols-3 gap-3 pt-2">
-            <div class="text-center">
-                <label class="text-[10px] text-red-400 font-bold block mb-2 uppercase tracking-tighter">Pessimiste</label>
-                <input type="number" id="rate-pess" value="5.0" step="0.1" class="bg-[#1a1a1a] text-white text-center rounded-lg p-2 w-full text-sm font-bold border border-red-900/30">
-            </div>
-            <div class="text-center">
-                <label class="text-[10px] text-green-400 font-bold block mb-2 uppercase tracking-tighter">Neutre</label>
-                <input type="number" id="rate-neut" value="7.0" step="0.1" class="bg-[#1a1a1a] text-white text-center rounded-lg p-2 w-full text-sm font-bold border border-green-900/30">
-            </div>
-            <div class="text-center">
-                <label class="text-[10px] text-blue-400 font-bold block mb-2 uppercase tracking-tighter">Optimiste</label>
-                <input type="number" id="rate-opti" value="10.0" step="0.1" class="bg-[#1a1a1a] text-white text-center rounded-lg p-2 w-full text-sm font-bold border border-blue-900/30">
-            </div>
-        </div>
-    </div>
-
-    <!-- Detail Overlay -->
-    <div id="detail-panel" class="hidden glass-panel rounded-2xl p-5 mb-8 fade-in shadow-2xl border border-yellow-500 relative z-10">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-white text-base">Projection : <span id="detail-year" class="text-yellow-500"></span></h3>
-            <button onclick="resetSelection()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full text-white transition">Fermer</button>
-        </div>
-        <div class="space-y-3" id="detail-values">
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-blue-400 font-medium text-xs uppercase tracking-tighter">Optimiste</span>
-                <span id="detail-opti" class="font-bold text-white text-base"></span>
-            </div>
-            <div class="flex justify-between items-center text-sm p-2 bg-white/5 rounded-lg -mx-2">
-                <span class="text-green-400 font-medium text-xs uppercase tracking-tighter">Neutre (Calcul)</span>
-                <span id="detail-neut" class="font-bold text-white text-base"></span>
-            </div>
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-red-400 font-medium text-xs uppercase tracking-tighter">Pessimiste</span>
-                <span id="detail-pess" class="font-bold text-white text-base"></span>
-            </div>
-            <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-[11px]">
-                <span class="text-gray-500 uppercase font-black">Capital Investi (Effort)</span>
-                <span id="detail-invested" class="text-gray-300 font-bold"></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stratégie -->
-    <div class="mb-2 px-2">
-        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">🚀 Stratégie de croissance</h3>
-    </div>
-    <div class="glass rounded-2xl p-5 mb-8 border border-white/5 bg-white/5 space-y-6">
-        <div id="block-savings">
-            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Épargne Mensuelle</label>
-            <div class="flex items-baseline gap-1 mb-1">
-                <input type="number" id="input-savings" class="hero-input text-4xl text-green-400" value="500">
-                <span class="text-2xl text-gray-500 font-light">€</span>
-            </div>
-            <input type="range" id="input-savings-slider" min="0" max="10000" step="50" value="500" class="w-full bg-gray-800 appearance-none cursor-pointer hover:bg-gray-700 transition mt-2">
-        </div>
-        <div id="block-target-age" class="hidden">
-            <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest mb-1 block">Âge de Retraite Visé</label>
-            <div class="flex items-baseline gap-1 mb-1">
-                <input type="number" id="input-target-age" class="hero-input text-4xl text-blue-400" value="50">
-                <span class="text-2xl text-gray-500 font-light">ans</span>
-            </div>
-            <input type="range" id="input-target-age-slider" min="1" max="100" step="1" value="50" class="w-full bg-gray-800 appearance-none cursor-pointer hover:bg-gray-700 transition mt-2">
-        </div>
-        <div class="border-t border-white/10 pt-4">
-            <div class="flex justify-between items-end mb-2">
-                 <label class="text-gray-500 text-[10px] uppercase font-bold tracking-widest block">Rente Mensuelle Cible</label>
-                 <span class="text-[9px] text-gray-600 font-bold">Capital: <span id="capital-required-label">750k</span> €</span>
-            </div>
-            <div class="flex items-baseline gap-1">
-                <input type="number" id="input-target-rente" class="hero-input text-3xl text-yellow-500" value="2500">
-                <span class="text-xl text-gray-500 font-light">€ / mois</span>
-            </div>
-            <input type="hidden" id="input-target-capital" value="750000">
-        </div>
-    </div>
-
-    <!-- BOUSSOLE MACRO -->
-    <div class="glass rounded-2xl p-5 mb-8 border border-white/5 bg-gradient-to-b from-[#111] to-[#0a0a0a]">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="font-bold text-sm text-gray-300 uppercase tracking-widest text-[11px]">⏰ Horloge de l'Investissement</h3>
+            <h1 class="text-3xl font-black tracking-tight text-white flex items-center gap-2">Indépendance <span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded font-normal">ULTIMATE</span></h1>
+            <p class="text-gray-500 text-sm font-medium">Projection FIRE & Flux de Trésorerie</p>
         </div>
         
-        <!-- Contrôles Macro Standardisés -->
-        <div class="space-y-2 mb-8">
-            <!-- Inflation Standardisé -->
-            <div class="p-3 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
-                <div>
-                   <label class="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tight">Inflation (FR)</label>
-                   <span id="inflation-source-label" class="text-[8px] text-gray-500 block font-medium tracking-tighter italic">Chargement...</span>
-                </div>
-                <div class="flex items-center gap-3">
-                   <div class="relative w-14">
-                        <input type="number" id="input-inflation" value="2.0" step="0.1" class="bg-transparent border-b border-white/10 text-right text-xs py-1 w-full outline-none focus:border-yellow-500 transition-colors" disabled>
-                   </div>
-                   <div class="relative inline-block w-10 h-6 align-middle select-none">
-                       <input type="checkbox" id="inflation-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5" checked/>
-                       <label for="inflation-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
-                   </div>
-                </div>
+        <div class="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full md:w-auto">
+            <button onclick="switchTab('tab-fire')" id="menu-tab-fire" class="flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active">🚀 Simulateur FIRE</button>
+            <button onclick="switchTab('tab-cashflow')" id="menu-tab-cashflow" class="flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">📊 Menu Cash Flow</button>
+        </div>
+    </div>
+
+    <div id="tab-fire" class="grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
+        
+        <div class="lg:col-span-5 space-y-6">
+            
+            <div class="flex p-1 bg-white/5 rounded-xl border border-white/10">
+                <button id="btn-mode-age" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-active">Calculer l'Âge</button>
+                <button id="btn-mode-savings" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">Calculer l'Épargne</button>
             </div>
 
-            <!-- Croissance Standardisé -->
-            <div class="p-3 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase tracking-wider">Croissance PIB</label>
-                    <span id="growth-source-label" class="text-[8px] text-gray-500 block font-medium tracking-tighter italic">Chargement...</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span id="compass-growth-val" class="text-xs font-bold text-white">0.8 %</span>
-                    <div class="relative inline-block w-10 h-6 align-middle select-none">
-                        <input type="checkbox" id="growth-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5" checked/>
-                        <label for="growth-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+            <div class="glass rounded-3xl p-6 space-y-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">📍 Situation Actuelle</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white/5 rounded-2xl p-4">
+                        <label class="text-gray-500 text-[10px] uppercase font-bold block mb-1">Âge Actuel</label>
+                        <div class="flex items-baseline gap-1 mb-2">
+                            <input type="number" id="input-age-hero" class="hero-input text-2xl" value="21">
+                            <span class="text-sm text-gray-500">ans</span>
+                        </div>
+                        <input type="range" id="input-age-slider" min="1" max="100" value="21" class="w-full">
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-4">
+                        <label class="text-gray-500 text-[10px] uppercase font-bold block mb-1">Patrimoine</label>
+                        <div class="flex items-baseline gap-1 mb-2">
+                            <input type="number" id="input-initial-hero" class="hero-input text-2xl" value="13000">
+                            <span class="text-sm text-gray-500">€</span>
+                        </div>
+                        <input type="range" id="input-initial-slider" min="0" max="500000" step="1000" value="13000" class="w-full">
                     </div>
                 </div>
             </div>
-            <input type="range" id="compass-growth-slider" min="-3.0" max="5.0" step="0.1" value="0.8" class="hidden">
+
+            <div class="glass rounded-3xl p-6 space-y-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">🚀 Stratégie</h3>
+                <div id="block-savings">
+                    <label class="text-gray-500 text-[10px] uppercase font-bold block mb-1">Épargne Mensuelle</label>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="input-savings" class="hero-input text-3xl text-green-400" value="500">
+                        <span class="text-xl text-gray-500 font-light">€</span>
+                    </div>
+                    <p id="cashflow-sync-notice" class="text-[10px] text-gray-500 mt-1 italic hidden">✨ Valeur synchronisée avec le Menu Cashflow</p>
+                    <input type="range" id="input-savings-slider" min="0" max="10000" step="50" value="500" class="w-full mt-2">
+                </div>
+                <div id="block-target-age" class="hidden">
+                    <label class="text-gray-500 text-[10px] uppercase font-bold block mb-1">Âge de Retraite Visé</label>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="input-target-age" class="hero-input text-3xl text-blue-400" value="50">
+                        <span class="text-xl text-gray-500 font-light">ans</span>
+                    </div>
+                    <input type="range" id="input-target-age-slider" min="1" max="100" value="50" class="w-full mt-2">
+                </div>
+                <div class="border-t border-white/10 pt-4">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-gray-500 text-[10px] uppercase font-bold block">Rente Mensuelle Cible</label>
+                        <span class="text-[10px] text-gray-400 font-bold">Capital requis: <span id="capital-required-label">750k</span> €</span>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="input-target-rente" class="hero-input text-2xl text-yellow-500" value="2500">
+                        <span class="text-sm text-gray-500">€ / mois</span>
+                    </div>
+                    <input type="hidden" id="input-target-capital" value="750000">
+                </div>
+            </div>
+
+            <div class="glass rounded-3xl p-6 space-y-4">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <label class="text-xs text-gray-300 font-bold block uppercase tracking-tight mb-0.5">⚖️ Fiscalité (Flat Tax 30%)</label>
+                        <span class="text-[10px] text-gray-500 block font-medium">Réduit l'estimation de vos gains nets de 30%</span>
+                    </div>
+                    <div class="relative inline-block w-10 h-6 select-none ml-4">
+                        <input type="checkbox" id="tax-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5"/>
+                        <label for="tax-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 pt-2">
+                    <div>
+                        <label class="text-[9px] text-red-400 font-bold block text-center uppercase mb-1">Pessimiste</label>
+                        <input type="number" id="rate-pess" value="5.0" step="0.1" class="input-dark p-2 text-center text-sm font-bold border border-red-900/30">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-green-400 font-bold block text-center uppercase mb-1">Neutre</label>
+                        <input type="number" id="rate-neut" value="7.0" step="0.1" class="input-dark p-2 text-center text-sm font-bold border border-green-900/30">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-blue-400 font-bold block text-center uppercase mb-1">Optimiste</label>
+                        <input type="number" id="rate-opti" value="10.0" step="0.1" class="input-dark p-2 text-center text-sm font-bold border border-blue-900/30">
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Boussole Visuelle avec Aiguille Redessinée -->
-        <div id="compass-area" class="relative w-64 h-64 mx-auto rounded-full border-4 border-gray-800 bg-black mb-10 shadow-2xl overflow-visible select-none flex items-center justify-center">
-            <!-- Zones -->
-            <div class="absolute top-0 right-0 w-1/2 h-1/2 bg-red-900/10 rounded-tr-full border-b border-l border-white/5"></div>
-            <div class="absolute bottom-0 right-0 w-1/2 h-1/2 bg-orange-900/10 rounded-br-full border-t border-l border-white/5"></div>
-            <div class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-blue-900/10 rounded-bl-full border-t border-r border-white/5"></div>
-            <div class="absolute top-0 left-0 w-1/2 h-1/2 bg-green-900/10 rounded-tl-full border-b border-r border-white/5"></div>
-
-            <!-- Labels Cardinaux -->
-            <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] text-green-500 font-black uppercase tracking-widest">Croissance +</span>
-            <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] text-red-500 font-black uppercase tracking-widest">Croissance -</span>
-            <span class="absolute -right-12 top-1/2 -translate-y-1/2 text-[9px] text-green-500 font-black uppercase tracking-widest rotate-90">Inflation +</span>
-            <span class="absolute -left-12 top-1/2 -translate-y-1/2 text-[9px] text-red-500 font-black uppercase tracking-widest -rotate-90">Inflation -</span>
-
-            <!-- Aiguille Premium -->
-            <div id="compass-needle" class="absolute top-1/2 left-1/2 origin-bottom -translate-x-1/2 -translate-y-full transition-transform duration-300 ease-out z-10" style="height: 110px;">
-                <div class="needle-shape"></div>
-            </div>
+        <div class="lg:col-span-7 space-y-6">
             
-            <!-- Pivot Central -->
-            <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-gray-900 rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 z-20 shadow-[0_0_10px_rgba(255,215,0,0.4)]"></div>
-        </div>
-
-        <!-- Analyse Historique -->
-        <div class="bg-black p-5 rounded-2xl border border-white/10 shadow-inner">
-            <div class="flex justify-between items-start mb-2">
-                <h4 id="compass-phase-name" class="font-black text-lg uppercase tracking-tight">Analyse...</h4>
-                <div id="historical-date" class="text-[9px] bg-white/10 px-2 py-1 rounded-full font-bold text-gray-400">---</div>
-            </div>
-            <p id="compass-phase-desc" class="text-[10px] text-gray-500 mb-4 h-10 leading-snug">Interagissez avec la boussole pour explorer.</p>
-            
-            <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-3 text-[10px]">
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
-                        <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[7px]">Actifs</span>
-                        <span id="compass-assets" class="font-bold text-white leading-tight block">-</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass rounded-3xl p-6 md:col-span-2 flex justify-between items-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                    <div>
+                        <p id="label-scorecard-main" class="text-gray-400 text-[11px] font-bold uppercase tracking-wider mb-1">Liberté estimée</p>
+                        <div class="text-5xl font-black accent-gold tracking-tight leading-none" id="mainScoreDisplay">--</div>
+                        <p id="unit-scorecard-main" class="text-sm text-gray-500 font-bold mt-1">ans</p>
                     </div>
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
-                        <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[7px]">Secteurs</span>
-                        <span id="compass-sectors" class="font-bold text-white leading-tight block">-</span>
+                    <div class="relative w-20 h-20">
+                        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120">
+                            <circle class="text-gray-800" stroke-width="8" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" />
+                            <circle id="progress-ring" class="text-yellow-500 progress-ring__circle" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" stroke-dasharray="326.72" stroke-dashoffset="326.72" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                            <span id="progress-text" class="text-lg font-bold text-white">0%</span>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/20">
-                    <span class="block text-yellow-500 uppercase font-black mb-1 tracking-widest text-[7px]">Contexte Historique</span>
-                    <span id="compass-history" class="text-[10px] text-gray-400 leading-relaxed block">-</span>
+                
+                <div id="quick-milestones" class="grid grid-cols-1 gap-2">
+                    </div>
+            </div>
+
+            <div class="glass rounded-3xl p-6 relative">
+                <div class="h-64">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+
+            <div id="detail-panel" class="hidden glass-panel rounded-2xl p-5 border border-yellow-500/50 fade-in shadow-2xl z-10 relative">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-white text-sm">Projection : <span id="detail-year" class="text-yellow-500"></span></h3>
+                    <button onclick="resetSelection()" class="text-[10px] bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-white transition">Fermer</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center" id="detail-values">
+                    <div class="p-2 bg-white/5 rounded-xl"><span class="block text-[9px] text-blue-400 font-bold uppercase">Optimiste</span><span id="detail-opti" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-yellow-500/10 rounded-xl border border-yellow-500/20"><span class="block text-[9px] text-green-400 font-bold uppercase">Neutre (Calcul)</span><span id="detail-neut" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-white/5 rounded-xl"><span class="block text-[9px] text-red-400 font-bold uppercase">Pessimiste</span><span id="detail-pess" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-white/5 rounded-xl border border-white/10"><span class="block text-[9px] text-gray-400 font-bold uppercase">Investi</span><span id="detail-invested" class="font-bold text-white text-sm"></span></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass rounded-3xl p-5 bg-gradient-to-b from-[#111] to-[#0a0a0a]">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-sm text-gray-300 uppercase tracking-widest text-[11px]">⏰ Horloge Macro</h3>
+                    </div>
+                    
+                    <div class="space-y-2 mb-6">
+                        <div class="p-2.5 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
+                            <div>
+                               <label class="text-[9px] text-gray-400 font-bold block uppercase tracking-tight">Inflation (Auto)</label>
+                               <span id="inflation-source-label" class="text-[8px] text-gray-500 block italic">Chargement...</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="relative w-12">
+                                    <input type="number" id="input-inflation" value="2.0" step="0.1" class="bg-transparent border-b border-white/10 text-right text-xs py-1 w-full outline-none focus:border-yellow-500 transition-colors" disabled>
+                                </div>
+                                <div class="relative inline-block w-8 h-5 align-middle select-none">
+                                    <input type="checkbox" id="inflation-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-2 appearance-none cursor-pointer transition-all duration-300 left-0.5 top-0.5 checked:left-3.5" checked/>
+                                    <label for="inflation-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-2.5 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
+                            <div>
+                                <label class="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Croissance PIB (Auto)</label>
+                                <span id="growth-source-label" class="text-[8px] text-gray-500 block italic">Chargement...</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span id="compass-growth-val" class="text-xs font-bold text-white">0.8 %</span>
+                                <div class="relative inline-block w-8 h-5 align-middle select-none">
+                                    <input type="checkbox" id="growth-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-2 appearance-none cursor-pointer transition-all duration-300 left-0.5 top-0.5 checked:left-3.5" checked/>
+                                    <label for="growth-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="range" id="compass-growth-slider" min="-3.0" max="5.0" step="0.1" value="0.8" class="hidden">
+                    </div>
+
+                    <div id="compass-area" class="relative w-48 h-48 mx-auto rounded-full border-4 border-gray-800 bg-black mb-4 shadow-2xl overflow-visible select-none flex items-center justify-center">
+                        <div class="absolute top-0 right-0 w-1/2 h-1/2 bg-red-900/10 rounded-tr-full border-b border-l border-white/5"></div>
+                        <div class="absolute bottom-0 right-0 w-1/2 h-1/2 bg-orange-900/10 rounded-br-full border-t border-l border-white/5"></div>
+                        <div class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-blue-900/10 rounded-bl-full border-t border-r border-white/5"></div>
+                        <div class="absolute top-0 left-0 w-1/2 h-1/2 bg-green-900/10 rounded-tl-full border-b border-r border-white/5"></div>
+                        
+                        <span class="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] text-green-500 font-black uppercase">Croiss. +</span>
+                        <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] text-red-500 font-black uppercase">Croiss. -</span>
+                        <span class="absolute -right-8 top-1/2 -translate-y-1/2 text-[8px] text-green-500 font-black uppercase rotate-90">Infla. +</span>
+                        <span class="absolute -left-8 top-1/2 -translate-y-1/2 text-[8px] text-red-500 font-black uppercase -rotate-90">Infla. -</span>
+
+                        <div id="compass-needle" class="absolute top-1/2 left-1/2 origin-bottom -translate-x-1/2 -translate-y-full transition-transform duration-300 ease-out z-10" style="height: 90px;">
+                            <div class="needle-shape"></div>
+                        </div>
+                        <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-gray-900 rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 z-20 shadow-[0_0_10px_rgba(255,215,0,0.4)]"></div>
+                    </div>
+                    <p class="text-[9px] text-center text-gray-500 uppercase tracking-widest mt-6">Glissez l'aiguille pour explorer</p>
+                </div>
+
+                <div class="bg-black p-5 rounded-3xl border border-white/10 shadow-inner flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 id="compass-phase-name" class="font-black text-xl uppercase tracking-tight">Analyse...</h4>
+                            <div id="historical-date" class="text-[9px] bg-white/10 px-2 py-1 rounded-full font-bold text-gray-400">---</div>
+                        </div>
+                        <p id="compass-phase-desc" class="text-[11px] text-gray-500 mb-4 h-10 leading-snug">Interagissez avec la boussole pour explorer le contexte macroéconomique.</p>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3 text-[10px]">
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[8px]">Actifs favorisés</span>
+                                <span id="compass-assets" class="font-bold text-white leading-tight block">-</span>
+                            </div>
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[8px]">Secteurs clés</span>
+                                <span id="compass-sectors" class="font-bold text-white leading-tight block">-</span>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/20">
+                            <span class="block text-yellow-500 uppercase font-black mb-1 tracking-widest text-[8px]">Contexte Historique</span>
+                            <span id="compass-history" class="text-[11px] text-gray-400 leading-relaxed block">-</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Milestones -->
-    <div class="space-y-3 mb-12">
-        <h3 class="font-bold text-xs uppercase text-gray-500 tracking-widest px-2">Jalons (Neutre)</h3>
-        <div id="milestones" class="space-y-2"></div>
+    <div id="tab-cashflow" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
+        
+        <div class="lg:col-span-5 space-y-6">
+            <div class="glass rounded-3xl p-6 space-y-4">
+                <h3 class="text-base font-bold text-white tracking-wide flex items-center gap-2">➕ Ajouter un flux financier</h3>
+                <p class="text-xs text-gray-400 leading-normal">Enregistrez vos entrées et sorties pour simuler la répartition de votre budget dans le diagramme.</p>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Type de Flux</label>
+                        <div class="flex p-1 bg-black/40 rounded-xl border border-white/10">
+                            <button id="cf-type-in" onclick="setCashflowType('in')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-green-500 text-black shadow-lg">🟢 Entrée d'Argent</button>
+                            <button id="cf-type-out" onclick="setCashflowType('out')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all">🔴 Sortie d'Argent</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Titre (ex: Loyer, Salaire...)</label>
+                        <input type="text" id="cf-title" placeholder="Titre..." class="input-dark text-sm">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Montant Mensuel (€)</label>
+                        <input type="number" id="cf-amount" placeholder="0" class="input-dark text-sm">
+                    </div>
+
+                    <button onclick="addCashflowItem()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-lg mt-2">Ajouter au graphique</button>
+                </div>
+            </div>
+            
+            <div class="glass rounded-3xl p-6">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">📋 Vos flux configurés</h3>
+                <div id="cashflow-list" class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-6">
+            
+            <div class="grid grid-cols-3 gap-4">
+                <div class="glass rounded-2xl p-4 border border-green-500/20"><span class="text-[9px] font-bold uppercase text-gray-400 block mb-1">Total Entrées</span><div id="sum-inflows" class="text-2xl font-bold text-green-400">0 €</div></div>
+                <div class="glass rounded-2xl p-4 border border-red-500/20"><span class="text-[9px] font-bold uppercase text-gray-400 block mb-1">Total Sorties</span><div id="sum-outflows" class="text-2xl font-bold text-red-400">0 €</div></div>
+                <div class="glass rounded-2xl p-4 border border-yellow-500/20 bg-yellow-500/5 shadow-[0_0_20px_rgba(255,215,0,0.1)]"><span class="text-[9px] font-bold uppercase text-yellow-500 block mb-1">Capacité Épargne</span><div id="sum-net" class="text-2xl font-bold text-yellow-400">0 €</div></div>
+            </div>
+
+            <div class="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full mb-4">
+                <button onclick="switchCfView('sankey')" id="cf-btn-sankey" class="flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active">💸 Flux</button>
+                <button onclick="switchCfView('bar')" id="cf-btn-bar" class="flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">📊 Colonnes</button>
+                <button onclick="switchCfView('pie')" id="cf-btn-pie" class="flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">◷ Répartition</button>
+            </div>
+
+            <div id="cf-view-sankey" class="glass rounded-3xl p-6 space-y-4 fade-in">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Diagramme de Flux (Sankey)</h3>
+                <div id="sankey-container" class="w-full h-80 flex items-center justify-center">
+                    <div id="sankey_basic" style="width: 100%; height: 100%;"></div>
+                </div>
+            </div>
+
+            <div id="cf-view-bar" class="hidden glass rounded-3xl p-6 space-y-4 fade-in">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Comparatif Entrées / Sorties</h3>
+                <div class="h-80 relative">
+                    <canvas id="cashflowChart"></canvas>
+                </div>
+            </div>
+            
+            <div id="cf-view-pie" class="hidden glass rounded-3xl p-6 space-y-4 fade-in">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Répartition détaillée</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-[11px] font-bold text-green-400 uppercase tracking-widest text-center mb-4">Entrées</h4>
+                        <div class="h-64 relative">
+                            <canvas id="inflowPieChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-[11px] font-bold text-red-400 uppercase tracking-widest text-center mb-4">Dépenses</h4>
+                        <div class="h-64 relative">
+                            <canvas id="outflowPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
-    <div class="border-t border-white/10 pt-6 pb-6 text-center px-4">
-        <p class="text-[10px] text-gray-500 leading-relaxed max-w-xs mx-auto">
-            <strong class="text-gray-400">Coast FIRE :</strong> Cap de patrimoine où les intérêts suffisent à atteindre l'objectif final sans épargne supplémentaire.
-        </p>
+    <div class="border-t border-white/10 mt-12 pt-6 pb-12 text-center text-[10px] text-gray-500">
+        <strong class="text-gray-400">Coast FIRE :</strong> Cap de patrimoine où les intérêts suffisent à atteindre l'objectif final sans épargne supplémentaire.
     </div>
 
     <script>
         let chart;
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        let calcMode = 'age';
+        let cashflowChart;
+        let inflowPieChart;
+        let outflowPieChart;
+        let isGoogleSankeyLoaded = false;
+        let activeCfView = 'sankey';
 
-        // Elements
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const cfCtx = document.getElementById('cashflowChart').getContext('2d');
+        const inPieCtx = document.getElementById('inflowPieChart').getContext('2d');
+        const outPieCtx = document.getElementById('outflowPieChart').getContext('2d');
+        
+        let calcMode = 'age';
+        let activeCashflowType = 'in';
+
+        let cashflowItems = [
+            { id: 1, title: 'Salaire Net', amount: 2500, type: 'in' },
+            { id: 2, title: 'Primes / Divers', amount: 300, type: 'in' },
+            { id: 3, title: 'Loyer', amount: 1000, type: 'out' },
+            { id: 4, title: 'Courses', amount: 400, type: 'out' },
+            { id: 5, title: 'Assurances', amount: 150, type: 'out' },
+            { id: 6, title: 'Loisirs & Restos', amount: 300, type: 'out' }
+        ];
+
         const elInitialHero = document.getElementById('input-initial-hero');
         const elInitialSlider = document.getElementById('input-initial-slider');
         const elAgeHero = document.getElementById('input-age-hero');
@@ -337,13 +436,10 @@
         const elTargetRente = document.getElementById('input-target-rente');
         const elTargetCapital = document.getElementById('input-target-capital');
         const elCapitalRequiredLabel = document.getElementById('capital-required-label');
+        
         const elInflationToggle = document.getElementById('inflation-toggle');
         const elInflationInput = document.getElementById('input-inflation');
         const elInflationSource = document.getElementById('inflation-source-label');
-        const elTaxToggle = document.getElementById('tax-toggle');
-        const elRatePess = document.getElementById('rate-pess');
-        const elRateNeut = document.getElementById('rate-neut');
-        const elRateOpti = document.getElementById('rate-opti');
         const elGrowthToggle = document.getElementById('growth-toggle');
         const elGrowthSource = document.getElementById('growth-source-label');
         const elGrowthSlider = document.getElementById('compass-growth-slider');
@@ -351,17 +447,292 @@
         const elNeedle = document.getElementById('compass-needle');
         const elCompassArea = document.getElementById('compass-area');
 
+        const elTaxToggle = document.getElementById('tax-toggle');
+        const elRatePess = document.getElementById('rate-pess');
+        const elRateNeut = document.getElementById('rate-neut');
+        const elRateOpti = document.getElementById('rate-opti');
+
         let chartDataStore = { labels: [], opti: [], neut: [], pess: [], invested: [] };
         let selectedYearIndex = null;
         let isDraggingNeedle = false;
+
+        google.charts.load('current', {'packages':['sankey']});
+        google.charts.setOnLoadCallback(() => {
+            isGoogleSankeyLoaded = true;
+            if (activeCfView === 'sankey') renderSankeyChart();
+        });
+
+        window.addEventListener('resize', () => {
+            if (document.getElementById('tab-cashflow').classList.contains('hidden') === false) {
+                if (activeCfView === 'sankey') renderSankeyChart();
+            }
+        });
+
+        function switchTab(tabId) {
+            document.getElementById('tab-fire').classList.add('hidden');
+            document.getElementById('tab-cashflow').classList.add('hidden');
+            document.getElementById('menu-tab-fire').className = "flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
+            document.getElementById('menu-tab-cashflow').className = "flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
+            
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('menu-' + tabId).className = "flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active";
+            
+            if (tabId === 'tab-cashflow') {
+                renderCashflowUI();
+                if (activeCfView === 'sankey') setTimeout(renderSankeyChart, 50);
+            }
+        }
+
+        function switchCfView(view) {
+            ['sankey', 'bar', 'pie'].forEach(v => {
+                document.getElementById('cf-view-' + v).classList.add('hidden');
+                document.getElementById('cf-btn-' + v).className = "flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
+            });
+            
+            document.getElementById('cf-view-' + view).classList.remove('hidden');
+            document.getElementById('cf-btn-' + view).className = "flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active";
+            activeCfView = view;
+            
+            if (view === 'sankey' && isGoogleSankeyLoaded) setTimeout(renderSankeyChart, 50);
+            if (view === 'pie') renderPieCharts();
+        }
+
+        function setCashflowType(type) {
+            activeCashflowType = type;
+            if(type === 'in') {
+                document.getElementById('cf-type-in').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-green-500 text-black shadow-lg";
+                document.getElementById('cf-type-out').className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all";
+            } else {
+                document.getElementById('cf-type-in').className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all";
+                document.getElementById('cf-type-out').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-red-500 text-black shadow-lg";
+            }
+        }
+
+        function addCashflowItem() {
+            const titleInput = document.getElementById('cf-title');
+            const amountInput = document.getElementById('cf-amount');
+            const title = titleInput.value.trim();
+            const amount = parseFloat(amountInput.value) || 0;
+
+            if(!title || amount <= 0) return alert('Veuillez renseigner un titre valide et un montant supérieur à 0.');
+
+            cashflowItems.push({ id: Date.now(), title, amount, type: activeCashflowType });
+            titleInput.value = ''; amountInput.value = '';
+            
+            renderCashflowUI();
+            syncNetSavingsToFIRE();
+        }
+
+        function deleteCashflowItem(id) {
+            cashflowItems = cashflowItems.filter(item => item.id !== id);
+            renderCashflowUI();
+            syncNetSavingsToFIRE();
+        }
+
+        function syncNetSavingsToFIRE() {
+            let inflows = cashflowItems.filter(i => i.type === 'in').reduce((sum, i) => sum + i.amount, 0);
+            let outflows = cashflowItems.filter(i => i.type === 'out').reduce((sum, i) => sum + i.amount, 0);
+            let net = Math.max(0, inflows - outflows);
+            
+            elSavings.value = net;
+            elSavingsSlider.value = net;
+            document.getElementById('cashflow-sync-notice').classList.remove('hidden');
+            calculate();
+        }
+
+        function renderCashflowUI() {
+            const container = document.getElementById('cashflow-list');
+            container.innerHTML = '';
+            let totalIn = 0; let totalOut = 0;
+
+            if (cashflowItems.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500 italic text-center py-4">Aucun flux configuré.</p>`;
+            } else {
+                const sortedItems = [...cashflowItems].sort((a,b) => (a.type === b.type) ? 0 : a.type === 'in' ? -1 : 1);
+
+                sortedItems.forEach(item => {
+                    if(item.type === 'in') totalIn += item.amount;
+                    else totalOut += item.amount;
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 hover:bg-white/10 transition";
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="${item.type === 'in' ? 'text-green-400' : 'text-red-400'} text-xs">●</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">${item.title}</h4>
+                                <span class="text-[9px] uppercase tracking-wider text-gray-500">${item.type === 'in' ? 'Entrée' : 'Sortie'}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm font-black ${item.type === 'in' ? 'text-green-400' : 'text-red-400'}">${item.type === 'in' ? '+' : '-'}${item.amount} €</span>
+                            <button onclick="deleteCashflowItem(${item.id})" class="text-gray-500 hover:text-red-400 font-bold text-xs transition p-1">✕</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            let net = totalIn - totalOut;
+            document.getElementById('sum-inflows').innerText = totalIn.toLocaleString() + ' €';
+            document.getElementById('sum-outflows').innerText = totalOut.toLocaleString() + ' €';
+            document.getElementById('sum-net').innerText = net.toLocaleString() + ' €';
+
+            renderCashflowBreakdownChart(totalIn, totalOut);
+            renderPieCharts();
+            if(isGoogleSankeyLoaded && activeCfView === 'sankey') {
+                renderSankeyChart();
+            }
+        }
+
+        function renderSankeyChart() {
+            if(!isGoogleSankeyLoaded) return;
+            const container = document.getElementById('sankey_basic');
+            if(!container) return;
+
+            let inflows = cashflowItems.filter(i => i.type === 'in');
+            let outflows = cashflowItems.filter(i => i.type === 'out');
+            let totalIn = inflows.reduce((sum, i) => sum + i.amount, 0);
+            let totalOut = outflows.reduce((sum, i) => sum + i.amount, 0);
+
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'De');
+            data.addColumn('string', 'Vers');
+            data.addColumn('number', 'Montant');
+
+            let rows = [];
+            
+            inflows.forEach(item => {
+                if(item.amount > 0) rows.push([item.title, 'Budget Global', item.amount]);
+            });
+
+            if(rows.length === 0) rows.push(['Aucun Revenu', 'Budget Global', 0.01]);
+
+            outflows.forEach(item => {
+                if(item.amount > 0) rows.push(['Budget Global', item.title, item.amount]);
+            });
+
+            let net = totalIn - totalOut;
+            if(net > 0) {
+                rows.push(['Budget Global', '💰 Épargne Libre', net]);
+            } else if (net < 0) {
+                 rows.push(['Déficit', 'Budget Global', Math.abs(net)]);
+            }
+
+            data.addRows(rows);
+
+            var options = {
+                backgroundColor: 'transparent',
+                sankey: {
+                    node: {
+                        label: { color: '#e5e7eb', fontSize: 11, bold: true },
+                        nodePadding: 16, width: 15,
+                        colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
+                    },
+                    link: { colorMode: 'gradient', colors: ['#4b5563'] }
+                }
+            };
+
+            var chart = new google.visualization.Sankey(container);
+            chart.draw(data, options);
+        }
+
+        function renderCashflowBreakdownChart(inflows, outflows) {
+            if(cashflowChart) {
+                cashflowChart.data.datasets[0].data = [inflows, outflows];
+                cashflowChart.update();
+                return;
+            }
+            cashflowChart = new Chart(cfCtx, {
+                type: 'bar',
+                data: {
+                    labels: ["Total Entrées", "Total Sorties"],
+                    datasets: [{
+                        data: [inflows, outflows],
+                        backgroundColor: ['rgba(34, 197, 94, 0.5)', 'rgba(239, 68, 68, 0.5)'],
+                        borderColor: ['#22c55e', '#ef4444'],
+                        borderWidth: 2, borderRadius: 12
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#aaa', font: { size: 11 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function renderPieCharts() {
+            const inItems = cashflowItems.filter(i => i.type === 'in');
+            const outItems = cashflowItems.filter(i => i.type === 'out');
+
+            const inLabels = inItems.map(i => i.title);
+            const inData = inItems.map(i => i.amount);
+            const outLabels = outItems.map(i => i.title);
+            const outData = outItems.map(i => i.amount);
+
+            // Changement ici : utilisation d'une palette vibrante et variée pour une meilleure lisibilité
+            const distinctColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e'];
+
+            const commonOptions = {
+                responsive: true, 
+                maintainAspectRatio: false, 
+                cutout: '75%',
+                plugins: {
+                    legend: { 
+                        position: 'bottom', 
+                        labels: { color: '#9ca3af', font: {size: 10}, padding: 15, usePointStyle: true } 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) label += context.parsed + ' €';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                elements: { arc: { borderWidth: 2, borderColor: '#111' } }
+            };
+
+            if(inflowPieChart) {
+                inflowPieChart.data.labels = inLabels;
+                inflowPieChart.data.datasets[0].data = inData;
+                inflowPieChart.update();
+            } else {
+                inflowPieChart = new Chart(inPieCtx, {
+                    type: 'doughnut',
+                    data: { labels: inLabels, datasets: [{ data: inData, backgroundColor: distinctColors }] },
+                    options: commonOptions
+                });
+            }
+
+            if(outflowPieChart) {
+                outflowPieChart.data.labels = outLabels;
+                outflowPieChart.data.datasets[0].data = outData;
+                outflowPieChart.update();
+            } else {
+                // Utilisation d'une variante décalée pour éviter d'avoir exactement les mêmes couleurs de chaque côté
+                const shiftedColors = [...distinctColors.slice(2), ...distinctColors.slice(0, 2)];
+                outflowPieChart = new Chart(outPieCtx, {
+                    type: 'doughnut',
+                    data: { labels: outLabels, datasets: [{ data: outData, backgroundColor: shiftedColors }] },
+                    options: commonOptions
+                });
+            }
+        }
 
         async function init() {
             document.getElementById('btn-mode-age').onclick = () => setMode('age');
             document.getElementById('btn-mode-savings').onclick = () => setMode('savings');
 
             const sync = (a, b) => {
-                a.oninput = () => { b.value = a.value; calculate(); };
-                b.oninput = () => { a.value = b.value; calculate(); };
+                a.oninput = () => { b.value = a.value; document.getElementById('cashflow-sync-notice').classList.add('hidden'); calculate(); };
+                b.oninput = () => { a.value = b.value; document.getElementById('cashflow-sync-notice').classList.add('hidden'); calculate(); };
             };
             sync(elInitialSlider, elInitialHero);
             sync(elAgeSlider, elAgeHero);
@@ -382,7 +753,7 @@
                 elInflationInput.disabled = elInflationToggle.checked;
                 if(elInflationToggle.checked) await fetchInflation();
                 else elInflationSource.innerText = "MANUEL";
-                calculate();
+                calculate(); updateCompass();
             };
 
             elGrowthToggle.onchange = async () => {
@@ -391,7 +762,6 @@
                 updateCompass();
             };
 
-            // Drag Needle Logic
             const handleNeedleMove = (e) => {
                 if(!isDraggingNeedle) return;
                 const rect = elCompassArea.getBoundingClientRect();
@@ -421,16 +791,14 @@
             window.addEventListener('mouseup', () => { isDraggingNeedle = false; elCompassArea.classList.remove('grabbing'); });
             window.addEventListener('mousemove', handleNeedleMove);
             elCompassArea.addEventListener('touchstart', (e) => { isDraggingNeedle = true; handleNeedleMove(e); }, {passive: false});
-            window.addEventListener('touchend', () => isDraggingNeedle = false);
+            window.addEventListener('touchend', () => { isDraggingNeedle = false; });
             window.addEventListener('touchmove', handleNeedleMove, {passive: false});
 
             await Promise.all([fetchInflation(), fetchGrowth()]);
-            calculate();
+            syncNetSavingsToFIRE(); 
         }
 
         async function fetchInflation() {
-            if(!elInflationToggle.checked) return;
-            elInflationSource.innerText = "Connexion...";
             try {
                 const res = await fetch('https://api.worldbank.org/v2/country/FR/indicator/FP.CPI.TOTL.ZG?format=json&per_page=5');
                 const data = await res.json();
@@ -438,14 +806,11 @@
                 elInflationInput.value = entry.value.toFixed(1);
                 elInflationSource.innerText = `AUTO (${entry.date})`;
             } catch(e) {
-                elInflationInput.value = "2.0";
-                elInflationSource.innerText = "AUTO (Défaut)";
+                elInflationInput.value = "2.0"; elInflationSource.innerText = "AUTO (Défaut)";
             }
         }
 
         async function fetchGrowth() {
-            if(!elGrowthToggle.checked) return;
-            elGrowthSource.innerText = "Connexion...";
             try {
                 const res = await fetch('https://api.worldbank.org/v2/country/FR/indicator/NY.GDP.MKTP.KD.ZG?format=json&per_page=5');
                 const data = await res.json();
@@ -454,9 +819,7 @@
                 elGrowthValText.innerText = elGrowthSlider.value + " %";
                 elGrowthSource.innerText = `AUTO (${entry.date})`;
             } catch(e) {
-                elGrowthSlider.value = "0.8";
-                elGrowthValText.innerText = "0.8 %";
-                elGrowthSource.innerText = "AUTO (Défaut)";
+                elGrowthSlider.value = "0.8"; elGrowthValText.innerText = "0.8 %"; elGrowthSource.innerText = "AUTO (Défaut)";
             }
         }
 
@@ -521,7 +884,7 @@
             
             chartDataStore = { labels, opti: dO, neut: dN, pess: dP, invested: dI };
             renderChart();
-            renderMilestones(dN, targetCap, startAge, infl);
+            renderQuickMilestones(dN, targetCap, startAge, infl);
             updateCompass();
             if(selectedYearIndex !== null) updateDetail(selectedYearIndex);
         }
@@ -545,26 +908,26 @@
                 ph = "Surchauffe"; co = "text-red-500"; da = "1960s / 2021";
                 de = "Demande > Offre. Les prix s'envolent."; 
                 as = "Matières premières, Immobilier"; se = "Énergie, Matériaux";
-                hi = "Fin des Trente Glorieuses (60s) ou reprise post-COVID (2021) : inflation forte par consommation record.";
+                hi = "Forte inflation par consommation record.";
             } else if(dx >= 0 && dy < 0) { 
                 ph = "Stagflation"; co = "text-orange-500"; da = "1973-1979";
                 de = "Croissance faible, prix élevés."; 
                 as = "Cash, Or, Obligations courtes"; se = "Santé, Services Publics";
-                hi = "Chocs pétroliers des années 70 : économie stagnante alors que l'énergie explose l'inflation.";
+                hi = "Économie stagnante alors que l'énergie fait exploser l'inflation.";
             } else if(dx < 0 && dy < 0) { 
                 ph = "Réflation"; co = "text-blue-500"; da = "2009-2012";
                 de = "Sortie de crise avec taux bas."; 
                 as = "Obligations longues, Croissance"; se = "Finances, Tech";
-                hi = "Lendemain de 2008 : les banques centrales injectent massivement pour relancer la machine.";
+                hi = "Les banques centrales injectent massivement pour relancer la machine.";
             } else { 
                 ph = "Récupération"; co = "text-green-500"; da = "1950s / 2015";
                 de = "Croissance saine, inflation basse."; 
                 as = "Actions Cycliques, Small Caps"; se = "Industrie, Tech, Conso";
-                hi = "Milieu des Trente Glorieuses (France) : industrialisation massive et monnaie stable.";
+                hi = "Période de stabilité et de développement industriel modéré.";
             }
 
             document.getElementById('compass-phase-name').innerText = ph;
-            document.getElementById('compass-phase-name').className = `font-black text-lg mb-1 uppercase tracking-tight ${co}`;
+            document.getElementById('compass-phase-name').className = `font-black text-xl mb-1 uppercase tracking-tight ${co}`;
             document.getElementById('compass-phase-desc').innerText = de;
             document.getElementById('compass-assets').innerText = as;
             document.getElementById('compass-sectors').innerText = se;
@@ -593,9 +956,9 @@
                 data: {
                     labels: chartDataStore.labels,
                     datasets: [
-                        { label: 'Opti', data: chartDataStore.opti, borderColor: '#3b82f6', borderWeight: 2, pointRadius: 0, tension: 0.4 },
-                        { label: 'Neut', data: chartDataStore.neut, borderColor: '#22c55e', borderWeight: 3, pointRadius: 0, tension: 0.4 },
-                        { label: 'Pess', data: chartDataStore.pess, borderColor: '#ef4444', borderWeight: 2, pointRadius: 0, tension: 0.4 }
+                        { label: 'Optimiste', data: chartDataStore.opti, borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                        { label: 'Neutre', data: chartDataStore.neut, borderColor: '#22c55e', borderWidth: 3, pointRadius: 0, tension: 0.4 },
+                        { label: 'Pessimiste', data: chartDataStore.pess, borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, tension: 0.4 }
                     ]
                 },
                 options: {
@@ -605,15 +968,17 @@
                         const pts = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, true);
                         if(pts.length) { selectedYearIndex = pts[0].index; updateDetail(selectedYearIndex); chart.update(); }
                     },
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    scales: { x: { grid: { display: false }, ticks: { color: '#666', font: {size: 10} } }, y: { display: false } }
+                    plugins: { legend: { display: true, labels: { color: '#aaa', boxWidth: 12, font: { size: 10 } } } },
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { color: '#666', font: {size: 10} } }, 
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', font: {size: 10} } } 
+                    }
                 }
             });
         }
 
         function updateDetail(idx) {
-            const year = chartDataStore.labels[idx];
-            document.getElementById('detail-year').innerText = year + " ans";
+            document.getElementById('detail-year').innerText = chartDataStore.labels[idx] + " ans";
             document.getElementById('detail-opti').innerText = chartDataStore.opti[idx].toLocaleString() + " €";
             document.getElementById('detail-neut').innerText = chartDataStore.neut[idx].toLocaleString() + " €";
             document.getElementById('detail-pess').innerText = chartDataStore.pess[idx].toLocaleString() + " €";
@@ -623,18 +988,18 @@
 
         window.resetSelection = () => { selectedYearIndex = null; document.getElementById('detail-panel').classList.add('hidden'); if(chart) chart.update(); };
 
-        function renderMilestones(data, target, startAge, infl) {
-            const container = document.getElementById('milestones');
+        function renderQuickMilestones(data, target, startAge, infl) {
+            const container = document.getElementById('quick-milestones');
             container.innerHTML = '';
-            const steps = [{l:'Début (10%)', f:0.1, i:'🌱'}, {l:'Coast FIRE (50%)', f:0.5, i:'⚓️'}, {l:'Liberté Totale (100%)', f:1.0, i:'🗽'}];
+            const steps = [{l:'Coast (50%)', f:0.5, i:'⚓️'}, {l:'FIRE (100%)', f:1.0, i:'🗽'}];
             steps.forEach(s => {
                 let age = "100+";
                 for(let i=0; i<data.length; i++) {
                     if(data[i] >= target * s.f * Math.pow(1+infl, i)) { age = (startAge + i) + " ans"; break; }
                 }
                 const div = document.createElement('div');
-                div.className = "flex justify-between items-center p-4 glass rounded-xl border-l-2 border-white/20";
-                div.innerHTML = `<div class="flex items-center gap-3"><span>${s.i}</span><span class="text-[10px] font-bold uppercase text-gray-300 tracking-tight">${s.l}</span></div><span class="font-black text-sm text-yellow-500">${age}</span>`;
+                div.className = "glass p-3 rounded-2xl flex justify-between items-center border-l-4 border-yellow-500/50";
+                div.innerHTML = `<div class="flex items-center gap-2"><span class="text-xs">${s.i}</span><span class="text-[9px] font-bold uppercase text-gray-400 tracking-tight">${s.l}</span></div><span class="font-black text-xs text-yellow-400">${age}</span>`;
                 container.appendChild(div);
             });
         }
