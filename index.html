@@ -8,6 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
     <style>
         body { background-color: #050505; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -24,12 +27,15 @@
         .accent-gold { color: #ffd700; }
         input[type="range"] { accent-color: #ffd700; height: 4px; border-radius: 2px; }
         
-        /* Boutons Toggle (Switch) */
         .toggle-checkbox:checked { right: 0; border-color: #ffd700; }
         .toggle-checkbox:checked + .toggle-label { background-color: #ffd700; }
         
         .segment-active { background-color: #ffd700; color: #000; box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2); }
         .segment-inactive { background-color: transparent; color: #9ca3af; }
+        
+        /* Styles spécifiques au toggle du simulateur d'intérêts */
+        .toggle-comp-active { background-color: #333; color: #fff; border: 1px solid #555; }
+        .toggle-comp-inactive { background-color: transparent; color: #6b7280; border: 1px solid transparent; }
 
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -52,67 +58,80 @@
             width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 15px solid rgba(255, 215, 0, 0.4);
         }
 
-        /* ----- CUSTOM SCROLLBAR FINARY STYLE ----- */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 8px; border: 2px solid #050505; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Correction du style des info-bulles (tooltips) Google pour correspondre à Chart.js */
+        div.google-visualization-tooltip {
+            background-color: #1a1a1a !important;
+            border: 1px solid #333 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+            padding: 8px 12px !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            pointer-events: none;
         }
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        div.google-visualization-tooltip * { 
+            color: #fff !important; 
+            font-size: 12px !important; 
+            margin: 0 !important; 
+            font-weight: normal !important; 
         }
-        ::-webkit-scrollbar-thumb {
-            background: #4b5563;
-            border-radius: 8px;
-            border: 2px solid #050505;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
-        }
+
+        /* Hack CSS pour forcer le scroll du Sankey sur mobile */
+        .sankey-scroll { overflow-x: auto !important; overflow-y: hidden !important; }
+        .sankey-scroll::-webkit-scrollbar { height: 8px; }
+        .sankey-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        .sankey-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        #sankey_basic div { overflow: visible !important; }
     </style>
 </head>
 <body class="p-4 md:p-8 max-w-7xl mx-auto">
 
-    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-4">
+    <div class="mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-white/10 pb-4">
         <div>
             <h1 class="text-3xl font-black tracking-tight text-white flex items-center gap-2">Indépendance <span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded font-normal">ULTIMATE</span></h1>
             <p class="text-gray-500 text-sm font-medium">Projection FIRE & Flux de Trésorerie</p>
         </div>
         
-        <div class="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full md:w-auto">
-            <button onclick="switchTab('tab-fire')" id="menu-tab-fire" class="flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active">🚀 Simulateur FIRE</button>
-            <button onclick="switchTab('tab-cashflow')" id="menu-tab-cashflow" class="flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">📊 Menu Cash Flow</button>
+        <div class="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full xl:w-auto flex-col sm:flex-row gap-1">
+            <button onclick="switchTab('tab-fire')" id="menu-tab-fire" class="flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active whitespace-nowrap">🚀 Simulateur FIRE</button>
+            <button onclick="switchTab('tab-cashflow')" id="menu-tab-cashflow" class="flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive whitespace-nowrap">📊 Menu Cash Flow</button>
+            <button onclick="switchTab('tab-interets')" id="menu-tab-interets" class="flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive whitespace-nowrap">📈 Intérêts Composés</button>
         </div>
     </div>
 
     <div id="tab-fire" class="grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
         
         <div class="lg:col-span-5 space-y-6">
-            
-            <div class="flex p-1 bg-white/5 rounded-xl border border-white/10">
+            <div class="flex p-1 bg-white/5 rounded-xl border border-white/10 gap-1 sm:gap-0">
                 <button id="btn-mode-age" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-active">Calculer l'Âge</button>
                 <button id="btn-mode-savings" class="flex-1 py-2 text-[11px] uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">Calculer l'Épargne</button>
             </div>
 
             <div class="glass rounded-3xl p-6 space-y-4">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">📍 Situation Actuelle</h3>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="bg-white/5 rounded-2xl p-4">
                         <label class="text-gray-500 text-[10px] uppercase font-bold block mb-1">Âge Actuel</label>
                         <div class="flex items-baseline gap-1 mb-2">
-                            <input type="number" id="input-age-hero" class="hero-input text-2xl" value="21">
+                            <input type="number" id="input-age-hero" class="hero-input text-2xl" value="22">
                             <span class="text-sm text-gray-500">ans</span>
                         </div>
-                        <input type="range" id="input-age-slider" min="1" max="100" value="21" class="w-full">
+                        <input type="range" id="input-age-slider" min="1" max="100" value="22" class="w-full">
                     </div>
                     <div class="bg-white/5 rounded-2xl p-4">
                         <label class="text-gray-500 text-[10px] uppercase font-bold block mb-1">Patrimoine</label>
                         <div class="flex items-baseline gap-1 mb-2">
-                            <input type="number" id="input-initial-hero" class="hero-input text-2xl" value="13000">
+                            <input type="number" id="input-initial-hero" class="hero-input text-2xl" value="18000">
                             <span class="text-sm text-gray-500">€</span>
                         </div>
-                        <input type="range" id="input-initial-slider" min="0" max="500000" step="1000" value="13000" class="w-full">
+                        <input type="range" id="input-initial-slider" min="0" max="500000" step="1000" value="18000" class="w-full">
                     </div>
                 </div>
             </div>
@@ -137,9 +156,9 @@
                     <input type="range" id="input-target-age-slider" min="1" max="100" value="50" class="w-full mt-2">
                 </div>
                 <div class="border-t border-white/10 pt-4">
-                    <div class="flex justify-between items-end mb-1">
+                    <div class="flex justify-between items-end mb-1 gap-2">
                         <label class="text-gray-500 text-[10px] uppercase font-bold block">Rente Mensuelle Cible</label>
-                        <span class="text-[10px] text-gray-400 font-bold">Capital requis: <span id="capital-required-label">750k</span> €</span>
+                        <span class="text-[10px] text-gray-400 font-bold whitespace-nowrap">Capital requis: <span id="capital-required-label">750k</span> €</span>
                     </div>
                     <div class="flex items-baseline gap-1">
                         <input type="number" id="input-target-rente" class="hero-input text-2xl text-yellow-500" value="2500">
@@ -150,37 +169,37 @@
             </div>
 
             <div class="glass rounded-3xl p-6 space-y-4">
-                <div class="flex justify-between items-center mb-2">
-                    <div>
-                        <label class="text-xs text-gray-300 font-bold block uppercase tracking-tight mb-0.5">⚖️ Fiscalité (Flat Tax 30%)</label>
-                        <span class="text-[10px] text-gray-500 block font-medium">Réduit l'estimation de vos gains nets de 30%</span>
+                <div class="flex justify-between items-center mb-2 gap-3">
+                    <div class="min-w-0 flex-1">
+                        <label class="text-xs text-gray-300 font-bold block uppercase tracking-tight mb-0.5 truncate">⚖️ Fiscalité (Flat Tax 30%)</label>
+                        <span class="text-[10px] text-gray-500 block font-medium">Réduit l'estimation nette</span>
                     </div>
-                    <div class="relative inline-block w-10 h-6 select-none ml-4">
+                    <div class="relative inline-block w-10 h-6 select-none shrink-0">
                         <input type="checkbox" id="tax-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-1 top-1 checked:left-5"/>
                         <label for="tax-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-800 cursor-pointer border border-gray-600 transition-colors duration-300"></label>
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-3 gap-2 pt-2">
-                    <div>
-                        <label class="text-[9px] text-red-400 font-bold block text-center uppercase mb-1">Pessimiste</label>
+                    <div class="min-w-0">
+                        <label class="text-[9px] text-red-400 font-bold block text-center uppercase mb-1 truncate">Pessimiste</label>
                         <input type="number" id="rate-pess" value="5.0" step="0.1" class="input-dark p-2 text-center text-sm font-bold border border-red-900/30">
                     </div>
-                    <div>
-                        <label class="text-[9px] text-green-400 font-bold block text-center uppercase mb-1">Neutre</label>
+                    <div class="min-w-0">
+                        <label class="text-[9px] text-green-400 font-bold block text-center uppercase mb-1 truncate">Neutre</label>
                         <input type="number" id="rate-neut" value="7.0" step="0.1" class="input-dark p-2 text-center text-sm font-bold border border-green-900/30">
                     </div>
-                    <div>
-                        <label class="text-[9px] text-blue-400 font-bold block text-center uppercase mb-1">Optimiste</label>
+                    <div class="min-w-0">
+                        <label class="text-[9px] text-blue-400 font-bold block text-center uppercase mb-1 truncate">Optimiste</label>
                         <input type="number" id="rate-opti" value="10.0" step="0.1" class="input-dark p-2 text-center text-sm font-bold border border-blue-900/30">
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="lg:col-span-7 space-y-6">
+        <div class="lg:col-span-7 flex flex-col gap-6">
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 order-2 lg:order-1">
                 <div class="glass rounded-3xl p-6 md:col-span-2 flex justify-between items-center relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                     <div>
@@ -188,7 +207,7 @@
                         <div class="text-5xl font-black accent-gold tracking-tight leading-none" id="mainScoreDisplay">--</div>
                         <p id="unit-scorecard-main" class="text-sm text-gray-500 font-bold mt-1">ans</p>
                     </div>
-                    <div class="relative w-20 h-20">
+                    <div class="relative w-20 h-20 shrink-0">
                         <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120">
                             <circle class="text-gray-800" stroke-width="8" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" />
                             <circle id="progress-ring" class="text-yellow-500 progress-ring__circle" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="52" cx="60" cy="60" stroke-dasharray="326.72" stroke-dashoffset="326.72" />
@@ -199,42 +218,45 @@
                     </div>
                 </div>
                 
-                <div id="quick-milestones" class="grid grid-cols-1 gap-2">
-                    </div>
+                <div id="quick-milestones" class="grid grid-cols-1 gap-2"></div>
             </div>
 
-            <div class="glass rounded-3xl p-6 relative">
-                <div class="h-64">
+            <div class="glass rounded-3xl p-6 relative order-1 lg:order-2">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+                    <span class="text-[9px] text-gray-500 uppercase tracking-widest">Glissez les axes (Prix / Âge) pour redimensionner</span>
+                    <button onclick="if(chart) { chart.options.scales.x.min = chartDataStore.xMinView; chart.options.scales.x.max = chartDataStore.xMaxView; chart.options.scales.y.max = chartDataStore.yMaxView; chart.update(); }" class="text-[9px] bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-white transition cursor-pointer z-20 shrink-0">Réinitialiser Vue</button>
+                </div>
+                <div class="h-64 relative">
                     <canvas id="mainChart"></canvas>
                 </div>
             </div>
 
-            <div id="detail-panel" class="hidden glass-panel rounded-2xl p-5 border border-yellow-500/50 fade-in shadow-2xl z-10 relative">
+            <div id="detail-panel" class="hidden glass-panel rounded-2xl p-5 border border-yellow-500/50 fade-in shadow-2xl z-10 relative order-3">
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="font-bold text-white text-sm">Projection : <span id="detail-year" class="text-yellow-500"></span></h3>
                     <button onclick="resetSelection()" class="text-[10px] bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-white transition">Fermer</button>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center" id="detail-values">
-                    <div class="p-2 bg-white/5 rounded-xl"><span class="block text-[9px] text-blue-400 font-bold uppercase">Optimiste</span><span id="detail-opti" class="font-bold text-white text-sm"></span></div>
-                    <div class="p-2 bg-yellow-500/10 rounded-xl border border-yellow-500/20"><span class="block text-[9px] text-green-400 font-bold uppercase">Neutre (Calcul)</span><span id="detail-neut" class="font-bold text-white text-sm"></span></div>
-                    <div class="p-2 bg-white/5 rounded-xl"><span class="block text-[9px] text-red-400 font-bold uppercase">Pessimiste</span><span id="detail-pess" class="font-bold text-white text-sm"></span></div>
-                    <div class="p-2 bg-white/5 rounded-xl border border-white/10"><span class="block text-[9px] text-gray-400 font-bold uppercase">Investi</span><span id="detail-invested" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-white/5 rounded-xl"><span class="block text-[9px] text-red-400 font-bold uppercase truncate">Pessimiste</span><span id="detail-pess" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-yellow-500/10 rounded-xl border border-yellow-500/20"><span class="block text-[9px] text-green-400 font-bold uppercase truncate">Neutre</span><span id="detail-neut" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-white/5 rounded-xl"><span class="block text-[9px] text-blue-400 font-bold uppercase truncate">Optimiste</span><span id="detail-opti" class="font-bold text-white text-sm"></span></div>
+                    <div class="p-2 bg-white/5 rounded-xl border border-white/10"><span class="block text-[9px] text-gray-400 font-bold uppercase truncate">Investi</span><span id="detail-invested" class="font-bold text-white text-sm"></span></div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 order-4">
                 <div class="glass rounded-3xl p-5 bg-gradient-to-b from-[#111] to-[#0a0a0a]">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-sm text-gray-300 uppercase tracking-widest text-[11px]">⏰ Horloge Macro</h3>
                     </div>
                     
                     <div class="space-y-2 mb-6">
-                        <div class="p-2.5 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
-                            <div>
-                               <label class="text-[9px] text-gray-400 font-bold block uppercase tracking-tight">Inflation (Auto)</label>
-                               <span id="inflation-source-label" class="text-[8px] text-gray-500 block italic">Chargement...</span>
+                        <div class="p-2.5 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center gap-2">
+                            <div class="min-w-0 flex-1">
+                               <label class="text-[9px] text-gray-400 font-bold block uppercase tracking-tight truncate">Inflation (Auto)</label>
+                               <span id="inflation-source-label" class="text-[8px] text-gray-500 block italic truncate">Chargement...</span>
                             </div>
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
                                 <div class="relative w-12">
                                     <input type="number" id="input-inflation" value="2.0" step="0.1" class="bg-transparent border-b border-white/10 text-right text-xs py-1 w-full outline-none focus:border-yellow-500 transition-colors" disabled>
                                 </div>
@@ -245,12 +267,12 @@
                             </div>
                         </div>
                         
-                        <div class="p-2.5 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center">
-                            <div>
-                                <label class="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Croissance PIB (Auto)</label>
-                                <span id="growth-source-label" class="text-[8px] text-gray-500 block italic">Chargement...</span>
+                        <div class="p-2.5 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center gap-2">
+                            <div class="min-w-0 flex-1">
+                                <label class="text-[9px] text-gray-400 font-bold block uppercase tracking-tight truncate">Croissance PIB (Auto)</label>
+                                <span id="growth-source-label" class="text-[8px] text-gray-500 block italic truncate">Chargement...</span>
                             </div>
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
                                 <span id="compass-growth-val" class="text-xs font-bold text-white">0.8 %</span>
                                 <div class="relative inline-block w-8 h-5 align-middle select-none">
                                     <input type="checkbox" id="growth-toggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-2 appearance-none cursor-pointer transition-all duration-300 left-0.5 top-0.5 checked:left-3.5" checked/>
@@ -267,10 +289,10 @@
                         <div class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-blue-900/10 rounded-bl-full border-t border-r border-white/5"></div>
                         <div class="absolute top-0 left-0 w-1/2 h-1/2 bg-green-900/10 rounded-tl-full border-b border-r border-white/5"></div>
                         
-                        <span class="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] text-green-500 font-black uppercase">Croiss. +</span>
-                        <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] text-red-500 font-black uppercase">Croiss. -</span>
-                        <span class="absolute -right-8 top-1/2 -translate-y-1/2 text-[8px] text-green-500 font-black uppercase rotate-90">Infla. +</span>
-                        <span class="absolute -left-8 top-1/2 -translate-y-1/2 text-[8px] text-red-500 font-black uppercase -rotate-90">Infla. -</span>
+                        <span class="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] text-green-500 font-black uppercase whitespace-nowrap">Croiss. +</span>
+                        <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] text-red-500 font-black uppercase whitespace-nowrap">Croiss. -</span>
+                        <span class="absolute -right-8 top-1/2 -translate-y-1/2 text-[8px] text-green-500 font-black uppercase rotate-90 whitespace-nowrap">Infla. +</span>
+                        <span class="absolute -left-8 top-1/2 -translate-y-1/2 text-[8px] text-red-500 font-black uppercase -rotate-90 whitespace-nowrap">Infla. -</span>
 
                         <div id="compass-needle" class="absolute top-1/2 left-1/2 origin-bottom -translate-x-1/2 -translate-y-full transition-transform duration-300 ease-out z-10" style="height: 90px;">
                             <div class="needle-shape"></div>
@@ -282,21 +304,21 @@
 
                 <div class="bg-black p-5 rounded-3xl border border-white/10 shadow-inner flex flex-col justify-between">
                     <div>
-                        <div class="flex justify-between items-start mb-2">
-                            <h4 id="compass-phase-name" class="font-black text-xl uppercase tracking-tight">Analyse...</h4>
-                            <div id="historical-date" class="text-[9px] bg-white/10 px-2 py-1 rounded-full font-bold text-gray-400">---</div>
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <h4 id="compass-phase-name" class="font-black text-xl uppercase tracking-tight truncate">Analyse...</h4>
+                            <div id="historical-date" class="text-[9px] bg-white/10 px-2 py-1 rounded-full font-bold text-gray-400 shrink-0">---</div>
                         </div>
                         <p id="compass-phase-desc" class="text-[11px] text-gray-500 mb-4 h-10 leading-snug">Interagissez avec la boussole pour explorer le contexte macroéconomique.</p>
                     </div>
                     
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-3 text-[10px]">
-                            <div class="bg-white/5 p-3 rounded-xl border border-white/5">
-                                <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[8px]">Actifs favorisés</span>
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/5 min-w-0">
+                                <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[8px] truncate">Actifs favorisés</span>
                                 <span id="compass-assets" class="font-bold text-white leading-tight block">-</span>
                             </div>
-                            <div class="bg-white/5 p-3 rounded-xl border border-white/5">
-                                <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[8px]">Secteurs clés</span>
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/5 min-w-0">
+                                <span class="block text-gray-500 uppercase font-black mb-1.5 tracking-widest text-[8px] truncate">Secteurs clés</span>
                                 <span id="compass-sectors" class="font-bold text-white leading-tight block">-</span>
                             </div>
                         </div>
@@ -320,10 +342,17 @@
                 <div class="space-y-3">
                     <div>
                         <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Type de Flux</label>
-                        <div class="flex p-1 bg-black/40 rounded-xl border border-white/10">
-                            <button id="cf-type-in" onclick="setCashflowType('in')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-green-500 text-black shadow-lg">🟢 Entrée d'Argent</button>
-                            <button id="cf-type-out" onclick="setCashflowType('out')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all">🔴 Sortie d'Argent</button>
+                        <div class="flex flex-col sm:flex-row p-1 bg-black/40 rounded-xl border border-white/10 gap-1 sm:gap-0">
+                            <button id="cf-type-in" onclick="setCashflowType('in')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-green-500 text-black shadow-lg truncate">🟢 Entrée d'Argent</button>
+                            <button id="cf-type-out" onclick="setCashflowType('out')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all truncate">🔴 Sortie d'Argent</button>
                         </div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block uppercase mb-1">Icône</label>
+                        <div id="icon-grid" class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide select-none">
+                            </div>
+                        <input type="hidden" id="cf-icon" value="💰">
                     </div>
 
                     <div>
@@ -336,35 +365,44 @@
                         <input type="number" id="cf-amount" placeholder="0" class="input-dark text-sm">
                     </div>
 
-                    <button onclick="addCashflowItem()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-lg mt-2">Ajouter au graphique</button>
+                    <button onclick="addCashflowItem()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-lg mt-2 truncate">Ajouter au graphique</button>
                 </div>
             </div>
             
             <div class="glass rounded-3xl p-6">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">📋 Vos flux configurés</h3>
                 <div id="cashflow-list" class="space-y-2 max-h-64 overflow-y-auto pr-2">
-                    </div>
+                </div>
             </div>
         </div>
 
         <div class="lg:col-span-7 space-y-6">
             
-            <div class="grid grid-cols-3 gap-4">
-                <div class="glass rounded-2xl p-4 border border-green-500/20"><span class="text-[9px] font-bold uppercase text-gray-400 block mb-1">Total Entrées</span><div id="sum-inflows" class="text-2xl font-bold text-green-400">0 €</div></div>
-                <div class="glass rounded-2xl p-4 border border-red-500/20"><span class="text-[9px] font-bold uppercase text-gray-400 block mb-1">Total Sorties</span><div id="sum-outflows" class="text-2xl font-bold text-red-400">0 €</div></div>
-                <div class="glass rounded-2xl p-4 border border-yellow-500/20 bg-yellow-500/5 shadow-[0_0_20px_rgba(255,215,0,0.1)]"><span class="text-[9px] font-bold uppercase text-yellow-500 block mb-1">Capacité Épargne</span><div id="sum-net" class="text-2xl font-bold text-yellow-400">0 €</div></div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="glass rounded-2xl p-4 border border-green-500/20"><span class="text-[9px] font-bold uppercase text-gray-400 block mb-1">Total Entrées</span><div id="sum-inflows" class="text-2xl font-bold text-green-400 truncate">0 €</div></div>
+                <div class="glass rounded-2xl p-4 border border-red-500/20"><span class="text-[9px] font-bold uppercase text-gray-400 block mb-1">Total Sorties</span><div id="sum-outflows" class="text-2xl font-bold text-red-400 truncate">0 €</div></div>
+                <div class="glass rounded-2xl p-4 border border-yellow-500/20 bg-yellow-500/5 shadow-[0_0_20px_rgba(255,215,0,0.1)]"><span class="text-[9px] font-bold uppercase text-yellow-500 block mb-1">Capacité Épargne</span><div id="sum-net" class="text-2xl font-bold text-yellow-400 truncate">0 €</div></div>
             </div>
 
-            <div class="flex p-1 bg-white/5 rounded-xl border border-white/10 w-full mb-4">
-                <button onclick="switchCfView('sankey')" id="cf-btn-sankey" class="flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active">💸 Flux</button>
-                <button onclick="switchCfView('bar')" id="cf-btn-bar" class="flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">📊 Colonnes</button>
-                <button onclick="switchCfView('pie')" id="cf-btn-pie" class="flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">◷ Répartition</button>
+            <div class="flex flex-col sm:flex-row p-1 bg-white/5 rounded-xl border border-white/10 w-full mb-4 gap-1 sm:gap-0">
+                <button onclick="switchCfView('sankey')" id="cf-btn-sankey" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-2 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active">
+                    <span class="shrink-0 text-sm">💸</span>
+                    <span class="truncate">Flux</span>
+                </button>
+                <button onclick="switchCfView('bar')" id="cf-btn-bar" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-2 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">
+                    <span class="shrink-0 text-sm">📊</span>
+                    <span class="truncate">Colonnes</span>
+                </button>
+                <button onclick="switchCfView('pie')" id="cf-btn-pie" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-2 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive">
+                    <div class="w-3.5 h-3.5 rounded-full border-[1.5px] border-current shrink-0" style="background: conic-gradient(#3b82f6 0% 55%, #eab308 55% 80%, #22c55e 80% 100%);"></div>
+                    <span class="truncate">Répartition</span>
+                </button>
             </div>
 
-            <div id="cf-view-sankey" class="glass rounded-3xl p-6 space-y-4 fade-in">
+            <div id="cf-view-sankey" class="glass rounded-3xl p-4 sm:p-6 space-y-4 fade-in">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Diagramme de Flux (Sankey)</h3>
-                <div id="sankey-container" class="w-full h-80 flex items-center justify-center">
-                    <div id="sankey_basic" style="width: 100%; height: 100%;"></div>
+                <div id="sankey-container" class="w-full h-80 sankey-scroll relative rounded-lg">
+                    <div id="sankey_basic" style="width: 100%; height: 100%; min-width: 450px;"></div>
                 </div>
             </div>
 
@@ -396,6 +434,84 @@
         </div>
     </div>
 
+    <div id="tab-interets" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
+        
+        <div class="lg:col-span-4 space-y-6">
+            <div class="glass rounded-3xl p-6 space-y-6 bg-gradient-to-br from-[#111] to-[#050505]">
+                
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <label class="text-sm font-bold text-gray-300">Capital initial</label>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="comp-initial" class="bg-transparent text-right text-2xl font-black text-white outline-none w-32 focus:text-yellow-500 transition-colors" value="60000">
+                        <span class="text-gray-500 font-bold">€</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <label class="text-sm font-bold text-gray-300">Épargne mensuelle</label>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="comp-monthly" class="bg-transparent text-right text-2xl font-black text-white outline-none w-32 focus:text-yellow-500 transition-colors" value="500">
+                        <span class="text-gray-500 font-bold">€</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <label class="text-sm font-bold text-gray-300">Horizon</label>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="comp-years" class="bg-transparent text-right text-2xl font-black text-white outline-none w-20 focus:text-yellow-500 transition-colors" value="20">
+                        <span class="text-gray-500 font-bold">ans</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <label class="text-sm font-bold text-gray-300">Taux d'intérêt</label>
+                    <div class="flex items-baseline gap-1">
+                        <input type="number" id="comp-rate" step="0.1" class="bg-transparent text-right text-2xl font-black text-white outline-none w-20 focus:text-yellow-500 transition-colors" value="7.0">
+                        <span class="text-gray-500 font-bold">%</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-sm font-bold text-gray-300 block mb-3">Capitalisation</label>
+                    <div class="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+                        <button id="comp-freq-mensuelle" onclick="setCompFreq('mensuelle')" class="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-inactive">Mensuelle</button>
+                        <button id="comp-freq-annuelle" onclick="setCompFreq('annuelle')" class="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-active">Annuelle</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+            <div class="glass rounded-3xl p-6 bg-gradient-to-b from-[#111] to-[#0a0a0a] flex flex-col h-full">
+                
+                <div class="text-center mb-6">
+                    <p class="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">Capital final</p>
+                    <div class="text-4xl md:text-5xl font-black text-white tracking-tight" id="comp-final-capital">0 €</div>
+                    <p class="text-gray-500 text-xs mt-2 font-medium" id="comp-years-label">après 20 ans</p>
+                </div>
+
+                <div class="flex justify-center gap-4 mb-6">
+                    <div class="bg-white/5 px-4 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]"></span>
+                        <span class="text-xs text-gray-400 font-bold">Intérêts <span id="comp-total-interest" class="text-white ml-1">0 €</span></span>
+                    </div>
+                    <div class="bg-white/5 px-4 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
+                        <span class="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]"></span>
+                        <span class="text-xs text-gray-400 font-bold">Versements <span id="comp-total-deposits" class="text-white ml-1">0 €</span></span>
+                    </div>
+                </div>
+
+                <div class="h-64 relative w-full flex-grow">
+                    <canvas id="compoundChart"></canvas>
+                </div>
+
+                <div class="mt-8 text-center text-gray-400 text-sm leading-relaxed max-w-xl mx-auto" id="comp-summary-text">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+
     <div class="border-t border-white/10 mt-12 pt-6 pb-12 text-center text-[10px] text-gray-500">
         <strong class="text-gray-400">Coast FIRE :</strong> Cap de patrimoine où les intérêts suffisent à atteindre l'objectif final sans épargne supplémentaire.
     </div>
@@ -405,10 +521,12 @@
         let cashflowChart;
         let inflowPieChart;
         let outflowPieChart;
+        let compoundChartInstance = null;
         let isGoogleSankeyLoaded = false;
         let activeCfView = 'sankey';
 
-        const ctx = document.getElementById('mainChart').getContext('2d');
+        const canvas = document.getElementById('mainChart');
+        const ctx = canvas.getContext('2d');
         const cfCtx = document.getElementById('cashflowChart').getContext('2d');
         const inPieCtx = document.getElementById('inflowPieChart').getContext('2d');
         const outPieCtx = document.getElementById('outflowPieChart').getContext('2d');
@@ -416,14 +534,48 @@
         let calcMode = 'age';
         let activeCashflowType = 'in';
 
+        // Base de données par défaut avec des icônes
         let cashflowItems = [
-            { id: 1, title: 'Salaire Net', amount: 2500, type: 'in' },
-            { id: 2, title: 'Primes / Divers', amount: 300, type: 'in' },
-            { id: 3, title: 'Loyer', amount: 1000, type: 'out' },
-            { id: 4, title: 'Courses', amount: 400, type: 'out' },
-            { id: 5, title: 'Assurances', amount: 150, type: 'out' },
-            { id: 6, title: 'Loisirs & Restos', amount: 300, type: 'out' }
+            { id: 1, title: 'Salaire Net', amount: 1500, type: 'in', icon: '💼' },
+            { id: 2, title: 'Primes / Divers', amount: 300, type: 'in', icon: '🎁' },
+            { id: 3, title: 'Loyer', amount: 750, type: 'out', icon: '🏠' },
+            { id: 4, title: 'Courses', amount: 300, type: 'out', icon: '🛒' },
+            { id: 5, title: 'Assurances', amount: 150, type: 'out', icon: '🛡️' },
+            { id: 6, title: 'Loisirs & Restos', amount: 200, type: 'out', icon: '🍽️' }
         ];
+
+        function loadCashflowFromStorage() {
+            const saved = localStorage.getItem('fireCashflowItems');
+            if (saved) {
+                cashflowItems = JSON.parse(saved);
+            }
+        }
+
+        function saveCashflowToStorage() {
+            localStorage.setItem('fireCashflowItems', JSON.stringify(cashflowItems));
+        }
+
+        const availableIcons = ['💰','💼','📈','💵','👜','🎁','🏠','🛒','🚗','🍽️','✈️','🏥','🩺','📄','🛡️','🎉','📅','⚡','💧','📱','🎓','👶','🐶','🧘'];
+        
+        function initIconSelector() {
+            const container = document.getElementById('icon-grid');
+            container.innerHTML = availableIcons.map(icon => `
+                <button type="button" onclick="selectIcon('${icon}', this)" class="icon-btn shrink-0 w-9 h-9 rounded-lg bg-white/5 border border-white/10 hover:bg-white/20 transition text-lg flex items-center justify-center">
+                    ${icon}
+                </button>
+            `).join('');
+            selectIcon(availableIcons[0], container.firstElementChild);
+        }
+
+        window.selectIcon = function(icon, el) {
+            document.getElementById('cf-icon').value = icon;
+            document.querySelectorAll('.icon-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-500/20', 'border-yellow-500');
+                btn.classList.add('bg-white/5', 'border-white/10');
+            });
+            el.classList.remove('bg-white/5', 'border-white/10');
+            el.classList.add('bg-yellow-500/20', 'border-yellow-500');
+        }
 
         const elInitialHero = document.getElementById('input-initial-hero');
         const elInitialSlider = document.getElementById('input-initial-slider');
@@ -452,9 +604,10 @@
         const elRateNeut = document.getElementById('rate-neut');
         const elRateOpti = document.getElementById('rate-opti');
 
-        let chartDataStore = { labels: [], opti: [], neut: [], pess: [], invested: [] };
+        let chartDataStore = { labels: [], opti: [], neut: [], pess: [], invested: [], xMinView: 0, xMaxView: 100, yMaxView: 0 };
         let selectedYearIndex = null;
         let isDraggingNeedle = false;
+        let axisDragInitialized = false;
 
         google.charts.load('current', {'packages':['sankey']});
         google.charts.setOnLoadCallback(() => {
@@ -469,28 +622,34 @@
         });
 
         function switchTab(tabId) {
-            document.getElementById('tab-fire').classList.add('hidden');
-            document.getElementById('tab-cashflow').classList.add('hidden');
-            document.getElementById('menu-tab-fire').className = "flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
-            document.getElementById('menu-tab-cashflow').className = "flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
+            // Cacher tous les onglets
+            ['tab-fire', 'tab-cashflow', 'tab-interets'].forEach(t => {
+                document.getElementById(t).classList.add('hidden');
+                document.getElementById('menu-' + t).className = "flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive whitespace-nowrap";
+            });
             
+            // Afficher l'onglet cliqué
             document.getElementById(tabId).classList.remove('hidden');
-            document.getElementById('menu-' + tabId).className = "flex-1 md:flex-none px-6 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active";
+            document.getElementById('menu-' + tabId).className = "flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active whitespace-nowrap";
             
+            // Actions spécifiques
             if (tabId === 'tab-cashflow') {
                 renderCashflowUI();
                 if (activeCfView === 'sankey') setTimeout(renderSankeyChart, 50);
+            }
+            if (tabId === 'tab-interets') {
+                updateCompoundInterest();
             }
         }
 
         function switchCfView(view) {
             ['sankey', 'bar', 'pie'].forEach(v => {
                 document.getElementById('cf-view-' + v).classList.add('hidden');
-                document.getElementById('cf-btn-' + v).className = "flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
+                document.getElementById('cf-btn-' + v).className = "flex-1 flex items-center justify-center gap-2 py-2.5 px-2 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive";
             });
             
             document.getElementById('cf-view-' + view).classList.remove('hidden');
-            document.getElementById('cf-btn-' + view).className = "flex-1 py-2.5 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active";
+            document.getElementById('cf-btn-' + view).className = "flex-1 flex items-center justify-center gap-2 py-2.5 px-2 text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active";
             activeCfView = view;
             
             if (view === 'sankey' && isGoogleSankeyLoaded) setTimeout(renderSankeyChart, 50);
@@ -500,31 +659,35 @@
         function setCashflowType(type) {
             activeCashflowType = type;
             if(type === 'in') {
-                document.getElementById('cf-type-in').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-green-500 text-black shadow-lg";
-                document.getElementById('cf-type-out').className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all";
+                document.getElementById('cf-type-in').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-green-500 text-black shadow-lg truncate";
+                document.getElementById('cf-type-out').className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all truncate";
             } else {
-                document.getElementById('cf-type-in').className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all";
-                document.getElementById('cf-type-out').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-red-500 text-black shadow-lg";
+                document.getElementById('cf-type-in').className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 transition-all truncate";
+                document.getElementById('cf-type-out').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-red-500 text-black shadow-lg truncate";
             }
         }
 
         function addCashflowItem() {
             const titleInput = document.getElementById('cf-title');
             const amountInput = document.getElementById('cf-amount');
+            const iconInput = document.getElementById('cf-icon');
             const title = titleInput.value.trim();
             const amount = parseFloat(amountInput.value) || 0;
+            const icon = iconInput.value || '💰';
 
             if(!title || amount <= 0) return alert('Veuillez renseigner un titre valide et un montant supérieur à 0.');
 
-            cashflowItems.push({ id: Date.now(), title, amount, type: activeCashflowType });
+            cashflowItems.push({ id: Date.now(), title, amount, type: activeCashflowType, icon });
             titleInput.value = ''; amountInput.value = '';
             
+            saveCashflowToStorage();
             renderCashflowUI();
             syncNetSavingsToFIRE();
         }
 
         function deleteCashflowItem(id) {
             cashflowItems = cashflowItems.filter(item => item.id !== id);
+            saveCashflowToStorage();
             renderCashflowUI();
             syncNetSavingsToFIRE();
         }
@@ -553,18 +716,20 @@
                 sortedItems.forEach(item => {
                     if(item.type === 'in') totalIn += item.amount;
                     else totalOut += item.amount;
+                    
                     const div = document.createElement('div');
-                    div.className = "flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 hover:bg-white/10 transition";
+                    div.className = "flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 hover:bg-white/10 transition gap-2";
+                    
                     div.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <span class="${item.type === 'in' ? 'text-green-400' : 'text-red-400'} text-xs">●</span>
-                            <div>
-                                <h4 class="text-xs font-bold text-white">${item.title}</h4>
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="text-xl shrink-0 leading-none">${item.icon || '💰'}</span>
+                            <div class="min-w-0">
+                                <h4 class="text-xs font-bold text-white truncate">${item.title}</h4>
                                 <span class="text-[9px] uppercase tracking-wider text-gray-500">${item.type === 'in' ? 'Entrée' : 'Sortie'}</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span class="text-sm font-black ${item.type === 'in' ? 'text-green-400' : 'text-red-400'}">${item.type === 'in' ? '+' : '-'}${item.amount} €</span>
+                        <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                            <span class="text-sm font-black whitespace-nowrap ${item.type === 'in' ? 'text-green-400' : 'text-red-400'}">${item.type === 'in' ? '+' : '-'}${item.amount} €</span>
                             <button onclick="deleteCashflowItem(${item.id})" class="text-gray-500 hover:text-red-400 font-bold text-xs transition p-1">✕</button>
                         </div>
                     `;
@@ -577,7 +742,7 @@
             document.getElementById('sum-outflows').innerText = totalOut.toLocaleString() + ' €';
             document.getElementById('sum-net').innerText = net.toLocaleString() + ' €';
 
-            renderCashflowBreakdownChart(totalIn, totalOut);
+            renderCashflowBreakdownChart();
             renderPieCharts();
             if(isGoogleSankeyLoaded && activeCfView === 'sankey') {
                 renderSankeyChart();
@@ -598,24 +763,32 @@
             data.addColumn('string', 'De');
             data.addColumn('string', 'Vers');
             data.addColumn('number', 'Montant');
+            
+            data.addColumn({type: 'string', role: 'tooltip', 'p': {'html': true}});
 
             let rows = [];
             
             inflows.forEach(item => {
-                if(item.amount > 0) rows.push([item.title, 'Budget Global', item.amount]);
+                if(item.amount > 0) {
+                    const label = `${item.icon || ''} ${item.title}`;
+                    rows.push([label, 'Budget Global', item.amount, `<div style="padding: 2px;">${label}: ${item.amount} €</div>`]);
+                }
             });
 
-            if(rows.length === 0) rows.push(['Aucun Revenu', 'Budget Global', 0.01]);
+            if(rows.length === 0) rows.push(['Aucun Revenu', 'Budget Global', 0.01, 'Aucun Revenu']);
 
             outflows.forEach(item => {
-                if(item.amount > 0) rows.push(['Budget Global', item.title, item.amount]);
+                if(item.amount > 0) {
+                    const label = `${item.icon || ''} ${item.title}`;
+                    rows.push(['Budget Global', label, item.amount, `<div style="padding: 2px;">${label}: ${item.amount} €</div>`]);
+                }
             });
 
             let net = totalIn - totalOut;
             if(net > 0) {
-                rows.push(['Budget Global', '💰 Épargne Libre', net]);
+                rows.push(['Budget Global', 'Épargne Libre 💰', net, `<div style="padding: 2px;">Épargne Libre 💰: ${net} €</div>`]);
             } else if (net < 0) {
-                 rows.push(['Déficit', 'Budget Global', Math.abs(net)]);
+                 rows.push(['Déficit', 'Budget Global', Math.abs(net), `<div style="padding: 2px;">Déficit: ${Math.abs(net)} €</div>`]);
             }
 
             data.addRows(rows);
@@ -629,36 +802,82 @@
                         colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
                     },
                     link: { colorMode: 'gradient', colors: ['#4b5563'] }
-                }
+                },
+                tooltip: { isHtml: true } 
             };
 
             var chart = new google.visualization.Sankey(container);
             chart.draw(data, options);
         }
 
-        function renderCashflowBreakdownChart(inflows, outflows) {
-            if(cashflowChart) {
-                cashflowChart.data.datasets[0].data = [inflows, outflows];
-                cashflowChart.update();
-                return;
-            }
+        function renderCashflowBreakdownChart() {
+            let inItems = cashflowItems.filter(i => i.type === 'in');
+            let outItems = cashflowItems.filter(i => i.type === 'out');
+            
+            const distinctColorsIn = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e'];
+            const distinctColorsOut = [...distinctColorsIn.slice(2), ...distinctColorsIn.slice(0, 2)];
+
+            let datasets = [];
+
+            inItems.forEach((item, index) => {
+                datasets.push({
+                    label: `${item.icon || ''} ${item.title}`,
+                    data: [item.amount, 0],
+                    backgroundColor: distinctColorsIn[index % distinctColorsIn.length],
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    borderColor: '#111'
+                });
+            });
+
+            outItems.forEach((item, index) => {
+                datasets.push({
+                    label: `${item.icon || ''} ${item.title}`,
+                    data: [0, item.amount],
+                    backgroundColor: distinctColorsOut[index % distinctColorsOut.length],
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    borderColor: '#111'
+                });
+            });
+
+            if(cashflowChart) { cashflowChart.destroy(); }
+            
             cashflowChart = new Chart(cfCtx, {
                 type: 'bar',
                 data: {
                     labels: ["Total Entrées", "Total Sorties"],
-                    datasets: [{
-                        data: [inflows, outflows],
-                        backgroundColor: ['rgba(34, 197, 94, 0.5)', 'rgba(239, 68, 68, 0.5)'],
-                        borderColor: ['#22c55e', '#ef4444'],
-                        borderWidth: 2, borderRadius: 12
-                    }]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1a1a1a',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                title: () => null,
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + ' €';
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#aaa', font: { size: 11 } } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', font: { size: 10 } } }
+                        x: { 
+                            stacked: true,
+                            grid: { display: false }, 
+                            ticks: { color: '#aaa', font: { size: 11 } } 
+                        },
+                        y: { 
+                            stacked: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#666', font: { size: 10 } } 
+                        }
                     }
                 }
             });
@@ -668,12 +887,12 @@
             const inItems = cashflowItems.filter(i => i.type === 'in');
             const outItems = cashflowItems.filter(i => i.type === 'out');
 
-            const inLabels = inItems.map(i => i.title);
+            const inLabels = inItems.map(i => `${i.icon || ''} ${i.title}`);
             const inData = inItems.map(i => i.amount);
-            const outLabels = outItems.map(i => i.title);
+            
+            const outLabels = outItems.map(i => `${i.icon || ''} ${i.title}`);
             const outData = outItems.map(i => i.amount);
 
-            // Changement ici : utilisation d'une palette vibrante et variée pour une meilleure lisibilité
             const distinctColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e'];
 
             const commonOptions = {
@@ -683,10 +902,16 @@
                 plugins: {
                     legend: { 
                         position: 'bottom', 
-                        labels: { color: '#9ca3af', font: {size: 10}, padding: 15, usePointStyle: true } 
+                        labels: { color: '#9ca3af', font: {size: 10}, padding: 15, usePointStyle: true, pointStyle: 'circle' } 
                     },
                     tooltip: {
+                        backgroundColor: '#1a1a1a',
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
                         callbacks: {
+                            title: () => null,
                             label: function(context) {
                                 let label = context.label || '';
                                 if (label) label += ': ';
@@ -716,7 +941,6 @@
                 outflowPieChart.data.datasets[0].data = outData;
                 outflowPieChart.update();
             } else {
-                // Utilisation d'une variante décalée pour éviter d'avoir exactement les mêmes couleurs de chaque côté
                 const shiftedColors = [...distinctColors.slice(2), ...distinctColors.slice(0, 2)];
                 outflowPieChart = new Chart(outPieCtx, {
                     type: 'doughnut',
@@ -726,7 +950,235 @@
             }
         }
 
+        // ---- LOGIQUE SIMULATEUR INTÉRÊTS COMPOSÉS ----
+        function setCompFreq(type) {
+            if (type === 'mensuelle') {
+                document.getElementById('comp-freq-mensuelle').className = "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-active";
+                document.getElementById('comp-freq-annuelle').className = "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-inactive";
+            } else {
+                document.getElementById('comp-freq-mensuelle').className = "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-inactive";
+                document.getElementById('comp-freq-annuelle').className = "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-active";
+            }
+            updateCompoundInterest();
+        }
+
+        function updateCompoundInterest() {
+            const initial = parseFloat(document.getElementById('comp-initial').value) || 0;
+            const monthly = parseFloat(document.getElementById('comp-monthly').value) || 0;
+            const years = parseInt(document.getElementById('comp-years').value) || 0;
+            const rate = parseFloat(document.getElementById('comp-rate').value) || 0;
+            const isMonthly = document.getElementById('comp-freq-mensuelle').classList.contains('toggle-comp-active');
+
+            let labels = [];
+            let dataDeposits = [];
+            let dataInterest = []; // Représente la couche d'intérêts pour le graphique empilé
+
+            let currentBalance = initial;
+            let currentDeposits = initial;
+            
+            labels.push("Aujourd'hui");
+            dataDeposits.push(currentDeposits);
+            dataInterest.push(0);
+
+            let r = rate / 100;
+
+            for (let y = 1; y <= years; y++) {
+                for (let m = 1; m <= 12; m++) {
+                    currentDeposits += monthly;
+                    currentBalance += monthly;
+                    if (isMonthly) {
+                        currentBalance *= (1 + r / 12);
+                    }
+                }
+                if (!isMonthly) {
+                    currentBalance *= (1 + r); // Approche annuelle simplifiée
+                }
+                
+                labels.push(y === years ? `dans ${years} ans` : `${y} ans`);
+                dataDeposits.push(Math.round(currentDeposits));
+                dataInterest.push(Math.round(currentBalance - currentDeposits)); // Seulement les intérêts gagnés
+            }
+
+            const totalInterest = currentBalance - currentDeposits;
+
+            // Update UI
+            document.getElementById('comp-final-capital').innerText = Math.round(currentBalance).toLocaleString('fr-FR') + ' €';
+            document.getElementById('comp-years-label').innerText = `après ${years} ans`;
+            document.getElementById('comp-total-interest').innerText = Math.round(totalInterest).toLocaleString('fr-FR') + ' €';
+            document.getElementById('comp-total-deposits').innerText = Math.round(currentDeposits).toLocaleString('fr-FR') + ' €';
+
+            document.getElementById('comp-summary-text').innerHTML = `Avec un capital initial de <strong class="text-white">${initial.toLocaleString('fr-FR')} €</strong> et en investissant mensuellement <strong class="text-white">${monthly.toLocaleString('fr-FR')} €</strong> pendant <strong class="text-white">${years} ans</strong> à <strong class="text-white">${rate.toLocaleString('fr-FR')}%</strong>, vous obtenez un capital de <strong class="text-white">${Math.round(currentBalance).toLocaleString('fr-FR')} €</strong>.`;
+
+            // Chart update avec le style empilé
+            if (compoundChartInstance) {
+                compoundChartInstance.data.labels = labels;
+                compoundChartInstance.data.datasets[0].data = dataInterest; // Top layer (Intérêts)
+                compoundChartInstance.data.datasets[1].data = dataDeposits; // Bottom layer (Versements)
+                compoundChartInstance.update();
+            } else {
+                const compCtx = document.getElementById('compoundChart').getContext('2d');
+                
+                // Pour que Chart.js empile visuellement comme Finary, on active scales.y.stacked = true
+                compoundChartInstance = new Chart(compCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Intérêts',
+                                data: dataInterest,
+                                borderColor: '#eab308', // yellow-500
+                                backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                                borderWidth: 2,
+                                fill: true,
+                                pointRadius: 0,
+                                tension: 0.4,
+                                order: 1
+                            },
+                            {
+                                label: 'Versements',
+                                data: dataDeposits,
+                                borderColor: '#60a5fa', // blue-400
+                                backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                                borderWidth: 2,
+                                fill: 'origin',
+                                pointRadius: 0,
+                                tension: 0.4,
+                                order: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1a1a1a',
+                                borderColor: '#333',
+                                borderWidth: 1,
+                                padding: 10,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' €';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#666', font: {size: 10}, maxTicksLimit: 5 } },
+                            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', font: {size: 10} } }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Ecouteurs d'événements pour le simulateur d'intérêts
+        document.getElementById('comp-initial').addEventListener('input', updateCompoundInterest);
+        document.getElementById('comp-monthly').addEventListener('input', updateCompoundInterest);
+        document.getElementById('comp-years').addEventListener('input', updateCompoundInterest);
+        document.getElementById('comp-rate').addEventListener('input', updateCompoundInterest);
+
+        // ---- FIN LOGIQUE INTÉRÊTS COMPOSÉS ----
+
+
+        function initAxisDrag() {
+            if(axisDragInitialized) return;
+            
+            let isDraggingY = false;
+            let isDraggingX = false;
+            let lastY = 0;
+            let lastX = 0;
+
+            canvas.addEventListener('mousedown', (e) => {
+                if(!chart) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const scaleY = chart.scales.y;
+                const scaleX = chart.scales.x;
+
+                if (x >= scaleY.left && x <= scaleY.right && y >= scaleY.top && y <= scaleY.bottom) {
+                    isDraggingY = true;
+                    lastY = y;
+                    canvas.style.cursor = 'ns-resize';
+                } 
+                else if (y >= scaleX.top && y <= scaleX.bottom && x >= scaleX.left && x <= scaleX.right) {
+                    isDraggingX = true;
+                    lastX = x;
+                    canvas.style.cursor = 'ew-resize';
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if(!chart) return;
+                
+                if (isDraggingY) {
+                    const rect = canvas.getBoundingClientRect();
+                    const y = e.clientY - rect.top;
+                    const deltaY = y - lastY;
+                    lastY = y;
+
+                    let currentMax = chart.options.scales.y.max || chart.scales.y.max;
+                    let ratio = 1 + (deltaY / chart.scales.y.height) * 1.5; 
+                    let newMax = currentMax * ratio;
+                    
+                    if(newMax > 1000 && newMax < chartDataStore.yMaxView * 50) { 
+                        chart.options.scales.y.max = newMax;
+                        chart.update('none');
+                    }
+                } else if (isDraggingX) {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const deltaX = x - lastX;
+                    lastX = x;
+
+                    let currentMin = chart.options.scales.x.min;
+                    let currentMax = chart.options.scales.x.max || chart.scales.x.max;
+                    let range = currentMax - currentMin;
+                    
+                    let ratio = 1 - (deltaX / chart.scales.x.width) * 1.5;
+                    let newRange = range * ratio;
+                    let newMaxX = currentMin + newRange;
+
+                    if (newMaxX > currentMin + 5 && newMaxX <= chartDataStore.labels[chartDataStore.labels.length-1] + 20) {
+                         chart.options.scales.x.max = newMaxX;
+                         chart.update('none');
+                    }
+                } else {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const scaleY = chart.scales.y;
+                    const scaleX = chart.scales.x;
+                    
+                    if (x >= scaleY.left && x <= scaleY.right && y >= scaleY.top && y <= scaleY.bottom) {
+                        canvas.style.cursor = 'ns-resize';
+                    } else if (y >= scaleX.top && y <= scaleX.bottom && x >= scaleX.left && x <= scaleX.right) {
+                        canvas.style.cursor = 'ew-resize';
+                    } else {
+                        canvas.style.cursor = 'default';
+                    }
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if(isDraggingY || isDraggingX) {
+                    isDraggingY = false;
+                    isDraggingX = false;
+                    canvas.style.cursor = 'default';
+                }
+            });
+
+            axisDragInitialized = true;
+        }
+
         async function init() {
+            loadCashflowFromStorage();
+            initIconSelector();
+
             document.getElementById('btn-mode-age').onclick = () => setMode('age');
             document.getElementById('btn-mode-savings').onclick = () => setMode('savings');
 
@@ -796,6 +1248,8 @@
 
             await Promise.all([fetchInflation(), fetchGrowth()]);
             syncNetSavingsToFIRE(); 
+            initAxisDrag();
+            updateCompoundInterest(); // Initialize Compound tab
         }
 
         async function fetchInflation() {
@@ -838,7 +1292,7 @@
             const initial = parseFloat(elInitialHero.value) || 0;
             const targetCap = parseFloat(elTargetCapital.value) || 750000;
             const infl = (parseFloat(elInflationInput.value) || 0) / 100;
-            const startAge = parseInt(elAgeHero.value) || 21;
+            const startAge = parseInt(elAgeHero.value) || 22;
             const tax = elTaxToggle.checked ? 0.7 : 1.0;
 
             const rP = (parseFloat(elRatePess.value) / 100) * tax;
@@ -882,7 +1336,29 @@
             const progress = Math.min(100, Math.max(0, (initial / targetCap) * 100));
             updateProgress(progress);
             
-            chartDataStore = { labels, opti: dO, neut: dN, pess: dP, invested: dI };
+            let xMaxViewTarget = 100;
+            if (found) {
+                xMaxViewTarget = fAge + 5; 
+            } else if (calcMode === 'savings') {
+                xMaxViewTarget = parseInt(elTargetAge.value) + 5;
+            } else {
+                xMaxViewTarget = startAge + 40;
+            }
+            xMaxViewTarget = Math.min(100, Math.max(startAge + 10, xMaxViewTarget));
+            
+            chartDataStore.xMinView = labels[0];
+            let maxIndex = xMaxViewTarget - startAge;
+            if(maxIndex >= labels.length) maxIndex = labels.length - 1;
+            chartDataStore.xMaxView = labels[maxIndex];
+            
+            chartDataStore.yMaxView = targetCap * 1.5;
+
+            chartDataStore.labels = labels;
+            chartDataStore.opti = dO;
+            chartDataStore.neut = dN;
+            chartDataStore.pess = dP;
+            chartDataStore.invested = dI;
+
             renderChart();
             renderQuickMilestones(dN, targetCap, startAge, infl);
             updateCompass();
@@ -915,19 +1391,19 @@
                 as = "Cash, Or, Obligations courtes"; se = "Santé, Services Publics";
                 hi = "Économie stagnante alors que l'énergie fait exploser l'inflation.";
             } else if(dx < 0 && dy < 0) { 
-                ph = "Réflation"; co = "text-blue-500"; da = "2009-2012";
+                ph = "Reflation"; co = "text-blue-500"; da = "2009-2012";
                 de = "Sortie de crise avec taux bas."; 
                 as = "Obligations longues, Croissance"; se = "Finances, Tech";
                 hi = "Les banques centrales injectent massivement pour relancer la machine.";
             } else { 
-                ph = "Récupération"; co = "text-green-500"; da = "1950s / 2015";
+                ph = "Recovery"; co = "text-green-500"; da = "1950s / 2015";
                 de = "Croissance saine, inflation basse."; 
                 as = "Actions Cycliques, Small Caps"; se = "Industrie, Tech, Conso";
                 hi = "Période de stabilité et de développement industriel modéré.";
             }
 
             document.getElementById('compass-phase-name').innerText = ph;
-            document.getElementById('compass-phase-name').className = `font-black text-xl mb-1 uppercase tracking-tight ${co}`;
+            document.getElementById('compass-phase-name').className = `font-black text-xl mb-1 uppercase tracking-tight ${co} truncate`;
             document.getElementById('compass-phase-desc').innerText = de;
             document.getElementById('compass-assets').innerText = as;
             document.getElementById('compass-sectors').innerText = se;
@@ -944,10 +1420,14 @@
 
         function renderChart() {
             if(chart) {
+                chart.options.scales.x.min = chartDataStore.xMinView;
+                chart.options.scales.x.max = chartDataStore.xMaxView;
+                chart.options.scales.y.max = chartDataStore.yMaxView;
+
                 chart.data.labels = chartDataStore.labels;
-                chart.data.datasets[0].data = chartDataStore.opti;
+                chart.data.datasets[0].data = chartDataStore.pess;
                 chart.data.datasets[1].data = chartDataStore.neut;
-                chart.data.datasets[2].data = chartDataStore.pess;
+                chart.data.datasets[2].data = chartDataStore.opti;
                 chart.update('none');
                 return;
             }
@@ -956,9 +1436,9 @@
                 data: {
                     labels: chartDataStore.labels,
                     datasets: [
-                        { label: 'Optimiste', data: chartDataStore.opti, borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                        { label: 'Pessimiste', data: chartDataStore.pess, borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, tension: 0.4 },
                         { label: 'Neutre', data: chartDataStore.neut, borderColor: '#22c55e', borderWidth: 3, pointRadius: 0, tension: 0.4 },
-                        { label: 'Pessimiste', data: chartDataStore.pess, borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                        { label: 'Optimiste', data: chartDataStore.opti, borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, tension: 0.4 }
                     ]
                 },
                 options: {
@@ -968,10 +1448,41 @@
                         const pts = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, true);
                         if(pts.length) { selectedYearIndex = pts[0].index; updateDetail(selectedYearIndex); chart.update(); }
                     },
-                    plugins: { legend: { display: true, labels: { color: '#aaa', boxWidth: 12, font: { size: 10 } } } },
+                    plugins: { 
+                        legend: { display: true, labels: { color: '#aaa', boxWidth: 10, usePointStyle: true, pointStyle: 'circle', font: { size: 10 } } },
+                        tooltip: {
+                            usePointStyle: true,
+                            backgroundColor: '#1a1a1a',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            padding: 10,
+                            itemSort: function(a, b) {
+                                return b.datasetIndex - a.datasetIndex;
+                            }
+                        },
+                        zoom: {
+                            pan: { enabled: false },
+                            zoom: {
+                                wheel: { enabled: false }, 
+                                pinch: { enabled: false }, 
+                                drag: { enabled: false }, 
+                                mode: 'xy'
+                            }
+                        }
+                    },
                     scales: { 
-                        x: { grid: { display: false }, ticks: { color: '#666', font: {size: 10} } }, 
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', font: {size: 10} } } 
+                        x: { 
+                            min: chartDataStore.xMinView,
+                            max: chartDataStore.xMaxView,
+                            grid: { display: false }, 
+                            ticks: { color: '#666', font: {size: 10} } 
+                        }, 
+                        y: { 
+                            min: 0,
+                            max: chartDataStore.yMaxView,
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#666', font: {size: 10} } 
+                        } 
                     }
                 }
             });
@@ -986,20 +1497,50 @@
             document.getElementById('detail-panel').classList.remove('hidden');
         }
 
-        window.resetSelection = () => { selectedYearIndex = null; document.getElementById('detail-panel').classList.add('hidden'); if(chart) chart.update(); };
+        window.resetSelection = () => { 
+            selectedYearIndex = null; 
+            document.getElementById('detail-panel').classList.add('hidden'); 
+            if(chart) {
+                chart.options.scales.x.min = chartDataStore.xMinView;
+                chart.options.scales.x.max = chartDataStore.xMaxView;
+                chart.options.scales.y.max = chartDataStore.yMaxView;
+                chart.update();
+            }
+        };
 
         function renderQuickMilestones(data, target, startAge, infl) {
             const container = document.getElementById('quick-milestones');
             container.innerHTML = '';
-            const steps = [{l:'Coast (50%)', f:0.5, i:'⚓️'}, {l:'FIRE (100%)', f:1.0, i:'🗽'}];
+            
+            const steps = [
+                {l:'Fondation (25%)', f:0.25, i:'🌱'},
+                {l:'Coast (50%)', f:0.5, i:'⚓️'}, 
+                {l:'FIRE (100%)', f:1.0, i:'🗽'}
+            ];
+            
             steps.forEach(s => {
                 let age = "100+";
+                let amount = "-";
+                
                 for(let i=0; i<data.length; i++) {
-                    if(data[i] >= target * s.f * Math.pow(1+infl, i)) { age = (startAge + i) + " ans"; break; }
+                    if(data[i] >= target * s.f * Math.pow(1+infl, i)) { 
+                        age = (startAge + i) + " ans"; 
+                        amount = Math.round(data[i]).toLocaleString() + " €";
+                        break; 
+                    }
                 }
                 const div = document.createElement('div');
                 div.className = "glass p-3 rounded-2xl flex justify-between items-center border-l-4 border-yellow-500/50";
-                div.innerHTML = `<div class="flex items-center gap-2"><span class="text-xs">${s.i}</span><span class="text-[9px] font-bold uppercase text-gray-400 tracking-tight">${s.l}</span></div><span class="font-black text-xs text-yellow-400">${age}</span>`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs shrink-0">${s.i}</span>
+                        <span class="text-[9px] font-bold uppercase text-gray-400 tracking-tight truncate">${s.l}</span>
+                    </div>
+                    <div class="text-right leading-none shrink-0 ml-2">
+                        <span class="font-black text-xs text-yellow-400 block mb-0.5 whitespace-nowrap">${age}</span>
+                        <span class="text-[9px] font-bold text-gray-500 whitespace-nowrap">${amount}</span>
+                    </div>
+                `;
                 container.appendChild(div);
             });
         }
