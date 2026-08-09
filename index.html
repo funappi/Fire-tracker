@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -33,7 +34,6 @@
         .segment-active { background-color: #ffd700; color: #000; box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2); }
         .segment-inactive { background-color: transparent; color: #9ca3af; }
         
-        /* Styles spécifiques au toggle du simulateur d'intérêts */
         .toggle-comp-active { background-color: #333; color: #fff; border: 1px solid #555; }
         .toggle-comp-inactive { background-color: transparent; color: #6b7280; border: 1px solid transparent; }
 
@@ -66,7 +66,6 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Correction du style des info-bulles (tooltips) Google pour correspondre à Chart.js */
         div.google-visualization-tooltip {
             background-color: #1a1a1a !important;
             border: 1px solid #333 !important;
@@ -83,7 +82,6 @@
             font-weight: normal !important; 
         }
 
-        /* Hack CSS pour forcer le scroll du Sankey sur mobile */
         .sankey-scroll { overflow-x: auto !important; overflow-y: hidden !important; }
         .sankey-scroll::-webkit-scrollbar { height: 8px; }
         .sankey-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
@@ -106,6 +104,7 @@
         </div>
     </div>
 
+    <!-- ONGLET 1 : FIRE -->
     <div id="tab-fire" class="grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
         
         <div class="lg:col-span-5 space-y-6">
@@ -332,6 +331,7 @@
         </div>
     </div>
 
+    <!-- ONGLET 2 : CASHFLOW -->
     <div id="tab-cashflow" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
         
         <div class="lg:col-span-5 space-y-6">
@@ -399,7 +399,7 @@
                 </button>
             </div>
 
-            <div id="cf-view-sankey" class="glass rounded-3xl p-4 sm:p-6 space-y-4 fade-in">
+            <div id="cf-view-sankey" class="glass rounded-3xl p-4 sm:p-6 space-y-4 fade-in overflow-hidden">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Diagramme de Flux (Sankey)</h3>
                 <div id="sankey-container" class="w-full h-80 sankey-scroll relative rounded-lg">
                     <div id="sankey_basic" style="width: 100%; height: 100%; min-width: 450px;"></div>
@@ -434,6 +434,7 @@
         </div>
     </div>
 
+    <!-- ONGLET 3 : INTÉRÊTS COMPOSÉS -->
     <div id="tab-interets" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 fade-in">
         
         <div class="lg:col-span-4 space-y-6">
@@ -442,7 +443,7 @@
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <label class="text-sm font-bold text-gray-300">Capital initial</label>
                     <div class="flex items-baseline gap-1">
-                        <input type="number" id="comp-initial" class="bg-transparent text-right text-2xl font-black text-white outline-none w-32 focus:text-yellow-500 transition-colors" value="60000">
+                        <input type="number" id="comp-initial" class="bg-transparent text-right text-2xl font-black text-white outline-none w-32 focus:text-yellow-500 transition-colors" value="10000">
                         <span class="text-gray-500 font-bold">€</span>
                     </div>
                 </div>
@@ -450,7 +451,7 @@
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <label class="text-sm font-bold text-gray-300">Épargne mensuelle</label>
                     <div class="flex items-baseline gap-1">
-                        <input type="number" id="comp-monthly" class="bg-transparent text-right text-2xl font-black text-white outline-none w-32 focus:text-yellow-500 transition-colors" value="500">
+                        <input type="number" id="comp-monthly" class="bg-transparent text-right text-2xl font-black text-white outline-none w-32 focus:text-yellow-500 transition-colors" value="1000">
                         <span class="text-gray-500 font-bold">€</span>
                     </div>
                 </div>
@@ -466,7 +467,7 @@
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
                     <label class="text-sm font-bold text-gray-300">Taux d'intérêt</label>
                     <div class="flex items-baseline gap-1">
-                        <input type="number" id="comp-rate" step="0.1" class="bg-transparent text-right text-2xl font-black text-white outline-none w-20 focus:text-yellow-500 transition-colors" value="7.0">
+                        <input type="number" id="comp-rate" step="0.1" class="bg-transparent text-right text-2xl font-black text-white outline-none w-20 focus:text-yellow-500 transition-colors" value="5.0">
                         <span class="text-gray-500 font-bold">%</span>
                     </div>
                 </div>
@@ -534,7 +535,6 @@
         let calcMode = 'age';
         let activeCashflowType = 'in';
 
-        // Base de données par défaut avec des icônes
         let cashflowItems = [
             { id: 1, title: 'Salaire Net', amount: 1500, type: 'in', icon: '💼' },
             { id: 2, title: 'Primes / Divers', amount: 300, type: 'in', icon: '🎁' },
@@ -622,17 +622,14 @@
         });
 
         function switchTab(tabId) {
-            // Cacher tous les onglets
             ['tab-fire', 'tab-cashflow', 'tab-interets'].forEach(t => {
                 document.getElementById(t).classList.add('hidden');
                 document.getElementById('menu-' + t).className = "flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-inactive whitespace-nowrap";
             });
             
-            // Afficher l'onglet cliqué
             document.getElementById(tabId).classList.remove('hidden');
             document.getElementById('menu-' + tabId).className = "flex-1 xl:flex-none px-4 md:px-6 py-2.5 text-[10px] md:text-xs uppercase font-bold tracking-wider rounded-lg transition-all segment-active whitespace-nowrap";
             
-            // Actions spécifiques
             if (tabId === 'tab-cashflow') {
                 renderCashflowUI();
                 if (activeCfView === 'sankey') setTimeout(renderSankeyChart, 50);
@@ -950,7 +947,85 @@
             }
         }
 
-        // ---- LOGIQUE SIMULATEUR INTÉRÊTS COMPOSÉS ----
+        // ---- LOGIQUE SIMULATEUR INTÉRÊTS COMPOSÉS AVEC TOOLTIP CUSTOM ----
+
+        const getOrCreateTooltip = (chart) => {
+            let tooltipEl = document.getElementById('chartjs-custom-tooltip');
+            if (!tooltipEl) {
+                tooltipEl = document.createElement('div');
+                tooltipEl.id = 'chartjs-custom-tooltip';
+                tooltipEl.style.background = 'rgba(26, 26, 26, 0.95)';
+                tooltipEl.style.borderRadius = '16px';
+                tooltipEl.style.color = 'white';
+                tooltipEl.style.opacity = 1;
+                tooltipEl.style.pointerEvents = 'none';
+                tooltipEl.style.position = 'absolute';
+                tooltipEl.style.transform = 'translate(-50%, -110%)'; 
+                tooltipEl.style.transition = 'all .1s ease';
+                tooltipEl.style.border = '1px solid rgba(255,255,255,0.05)';
+                tooltipEl.style.boxShadow = '0 10px 30px rgba(0,0,0,0.8)';
+                tooltipEl.style.padding = '16px';
+                tooltipEl.style.minWidth = '220px';
+                tooltipEl.style.zIndex = '100';
+                
+                chart.canvas.parentNode.appendChild(tooltipEl);
+            }
+            return tooltipEl;
+        };
+
+        const customExternalTooltipHandler = (context) => {
+            const {chart, tooltip} = context;
+            const tooltipEl = getOrCreateTooltip(chart);
+
+            if (tooltip.opacity === 0) {
+                tooltipEl.style.opacity = 0;
+                return;
+            }
+
+            if (tooltip.body) {
+                let total = 0;
+                let rowsHtml = '';
+                
+                tooltip.dataPoints.forEach((dp) => {
+                    total += dp.raw;
+                    const label = dp.dataset.label;
+                    const val = dp.raw.toLocaleString('fr-FR') + ' €';
+                    const color = label === 'Intérêts' ? '#eab308' : '#60a5fa';
+                    
+                    rowsHtml += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #a1a1aa;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; box-shadow: 0 0 6px ${color}80;"></span>
+                                <span>${label}</span>
+                            </div>
+                            <span style="font-weight: bold; color: #f4f4f5;">${val}</span>
+                        </div>
+                    `;
+                });
+
+                const currentYear = new Date().getFullYear();
+                const dataIndex = tooltip.dataPoints[0].dataIndex;
+                const periodText = dataIndex === 0 ? "Aujourd'hui" : `Dans ${dataIndex} ans`;
+                const yearText = currentYear + dataIndex;
+
+                tooltipEl.innerHTML = `
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 11px; color: #9ca3af; font-weight: bold; letter-spacing: 0.05em; margin-bottom: 4px;">
+                            ${periodText} <span style="font-weight: normal; margin-left: 4px;">${yearText}</span>
+                        </div>
+                        <div style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em;">${total.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 0;"></div>
+                    ${rowsHtml}
+                `;
+            }
+
+            const {offsetLeft: positionX, offsetTop: positionY} = chart.canvas;
+            tooltipEl.style.opacity = 1;
+            tooltipEl.style.left = positionX + tooltip.caretX + 'px';
+            tooltipEl.style.top = positionY + tooltip.caretY - 10 + 'px';
+        };
+
         function setCompFreq(type) {
             if (type === 'mensuelle') {
                 document.getElementById('comp-freq-mensuelle').className = "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all toggle-comp-active";
@@ -971,7 +1046,7 @@
 
             let labels = [];
             let dataDeposits = [];
-            let dataInterest = []; // Représente la couche d'intérêts pour le graphique empilé
+            let dataInterest = []; 
 
             let currentBalance = initial;
             let currentDeposits = initial;
@@ -991,17 +1066,16 @@
                     }
                 }
                 if (!isMonthly) {
-                    currentBalance *= (1 + r); // Approche annuelle simplifiée
+                    currentBalance *= (1 + r);
                 }
                 
-                labels.push(y === years ? `dans ${years} ans` : `${y} ans`);
+                labels.push(`Dans ${y} ans`);
                 dataDeposits.push(Math.round(currentDeposits));
-                dataInterest.push(Math.round(currentBalance - currentDeposits)); // Seulement les intérêts gagnés
+                dataInterest.push(Math.round(currentBalance - currentDeposits));
             }
 
             const totalInterest = currentBalance - currentDeposits;
 
-            // Update UI
             document.getElementById('comp-final-capital').innerText = Math.round(currentBalance).toLocaleString('fr-FR') + ' €';
             document.getElementById('comp-years-label').innerText = `après ${years} ans`;
             document.getElementById('comp-total-interest').innerText = Math.round(totalInterest).toLocaleString('fr-FR') + ' €';
@@ -1009,42 +1083,48 @@
 
             document.getElementById('comp-summary-text').innerHTML = `Avec un capital initial de <strong class="text-white">${initial.toLocaleString('fr-FR')} €</strong> et en investissant mensuellement <strong class="text-white">${monthly.toLocaleString('fr-FR')} €</strong> pendant <strong class="text-white">${years} ans</strong> à <strong class="text-white">${rate.toLocaleString('fr-FR')}%</strong>, vous obtenez un capital de <strong class="text-white">${Math.round(currentBalance).toLocaleString('fr-FR')} €</strong>.`;
 
-            // Chart update avec le style empilé
             if (compoundChartInstance) {
                 compoundChartInstance.data.labels = labels;
-                compoundChartInstance.data.datasets[0].data = dataInterest; // Top layer (Intérêts)
-                compoundChartInstance.data.datasets[1].data = dataDeposits; // Bottom layer (Versements)
+                compoundChartInstance.data.datasets[0].data = dataInterest; // Intérêts (en bas)
+                compoundChartInstance.data.datasets[1].data = dataDeposits; // Versements (au-dessus)
                 compoundChartInstance.update();
             } else {
                 const compCtx = document.getElementById('compoundChart').getContext('2d');
                 
-                // Pour que Chart.js empile visuellement comme Finary, on active scales.y.stacked = true
                 compoundChartInstance = new Chart(compCtx, {
                     type: 'line',
                     data: {
                         labels: labels,
                         datasets: [
                             {
-                                label: 'Intérêts',
-                                data: dataInterest,
-                                borderColor: '#eab308', // yellow-500
-                                backgroundColor: 'rgba(234, 179, 8, 0.2)',
-                                borderWidth: 2,
-                                fill: true,
-                                pointRadius: 0,
-                                tension: 0.4,
-                                order: 1
-                            },
-                            {
                                 label: 'Versements',
                                 data: dataDeposits,
-                                borderColor: '#60a5fa', // blue-400
+                                borderColor: '#eab308', 
                                 backgroundColor: 'rgba(96, 165, 250, 0.2)',
                                 borderWidth: 2,
-                                fill: 'origin',
+                                fill: 'origin', // Remplit le bas sous la ligne bleue en bleu transparent
                                 pointRadius: 0,
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: '#eab308',
+                                pointHoverBorderColor: '#fff',
+                                pointHoverBorderWidth: 2,
                                 tension: 0.4,
                                 order: 2
+                            },
+                            {
+                                label: 'Intérêts',
+                                data: dataInterest,
+                                borderColor: '#60a5fa', 
+                                backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                                borderWidth: 2,
+                                fill: '-1', // S'empile au-dessus de la ligne bleue pour faire la zone jaune des intérêts
+                                pointRadius: 0,
+                                pointHoverRadius: 6,
+                                pointHoverBackgroundColor: '#60a5fa',
+                                pointHoverBorderColor: '#fff',
+                                pointHoverBorderWidth: 2,
+                                tension: 0.4,
+                                order: 1
                             }
                         ]
                     },
@@ -1053,28 +1133,27 @@
                         interaction: { mode: 'index', intersect: false },
                         plugins: { 
                             legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#1a1a1a',
-                                borderColor: '#333',
-                                borderWidth: 1,
-                                padding: 10,
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.parsed.y.toLocaleString('fr-FR') + ' €';
-                                    }
-                                }
+                            tooltip: { 
+                                enabled: false, 
+                                external: customExternalTooltipHandler 
                             }
                         },
                         scales: {
-                            x: { grid: { display: false }, ticks: { color: '#666', font: {size: 10}, maxTicksLimit: 5 } },
-                            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', font: {size: 10} } }
+                            x: { 
+                                grid: { display: false }, 
+                                ticks: { color: '#666', font: {size: 10}, maxTicksLimit: 5 } 
+                            },
+                            y: { 
+                                stacked: true, 
+                                grid: { color: 'rgba(255,255,255,0.05)' }, 
+                                ticks: { color: '#666', font: {size: 10} } 
+                            }
                         }
                     }
                 });
             }
         }
 
-        // Ecouteurs d'événements pour le simulateur d'intérêts
         document.getElementById('comp-initial').addEventListener('input', updateCompoundInterest);
         document.getElementById('comp-monthly').addEventListener('input', updateCompoundInterest);
         document.getElementById('comp-years').addEventListener('input', updateCompoundInterest);
@@ -1249,7 +1328,7 @@
             await Promise.all([fetchInflation(), fetchGrowth()]);
             syncNetSavingsToFIRE(); 
             initAxisDrag();
-            updateCompoundInterest(); // Initialize Compound tab
+            updateCompoundInterest();
         }
 
         async function fetchInflation() {
