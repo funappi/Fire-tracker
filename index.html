@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FIRE Tracker Pro - Ultimate Edition</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     
@@ -551,6 +551,11 @@
             }
         }
 
+        // Échappe le texte saisi par l'utilisateur avant de l'insérer dans innerHTML.
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
         function saveCashflowToStorage() {
             localStorage.setItem('fireCashflowItems', JSON.stringify(cashflowItems));
         }
@@ -719,15 +724,15 @@
                     
                     div.innerHTML = `
                         <div class="flex items-center gap-3 min-w-0">
-                            <span class="text-xl shrink-0 leading-none">${item.icon || '💰'}</span>
+                            <span class="text-xl shrink-0 leading-none">${escapeHtml(item.icon || '💰')}</span>
                             <div class="min-w-0">
-                                <h4 class="text-xs font-bold text-white truncate">${item.title}</h4>
+                                <h4 class="text-xs font-bold text-white truncate">${escapeHtml(item.title)}</h4>
                                 <span class="text-[9px] uppercase tracking-wider text-gray-500">${item.type === 'in' ? 'Entrée' : 'Sortie'}</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 sm:gap-4 shrink-0">
-                            <span class="text-sm font-black whitespace-nowrap ${item.type === 'in' ? 'text-green-400' : 'text-red-400'}">${item.type === 'in' ? '+' : '-'}${item.amount} €</span>
-                            <button onclick="deleteCashflowItem(${item.id})" class="text-gray-500 hover:text-red-400 font-bold text-xs transition p-1">✕</button>
+                            <span class="text-sm font-black whitespace-nowrap ${item.type === 'in' ? 'text-green-400' : 'text-red-400'}">${item.type === 'in' ? '+' : '-'}${Number(item.amount)} €</span>
+                            <button onclick="deleteCashflowItem(${Number(item.id)})" class="text-gray-500 hover:text-red-400 font-bold text-xs transition p-1">✕</button>
                         </div>
                     `;
                     container.appendChild(div);
@@ -1385,7 +1390,7 @@
                 if(months > 0) {
                     const fv = targetCap * Math.pow(1 + infl, targetAge - startAge);
                     const rm = rN / 12;
-                    savings = (rm === 0) ? (fv - initial) / months : (fv - initial * Math.pow(1 + rm, months)) * rm / (Math.pow(1 + rm, months) - 1);
+                    savings = (rm === 0) ? (fv - initial) / months : (fv - initial * Math.pow(1 + rm, months)) * rm / ((Math.pow(1 + rm, months) - 1) * (1 + rm));
                 }
                 document.getElementById('mainScoreDisplay').innerText = Math.round(Math.max(0, savings)).toLocaleString();
             } else {
@@ -1395,7 +1400,7 @@
             const labels = [];
             const dN = [], dO = [], dP = [], dI = [];
             let cN = initial, cO = initial, cP = initial;
-            let fAge = "85+";
+            let fAge = "100+";
             let found = false;
 
             for(let i=0; i<=100; i++) {
