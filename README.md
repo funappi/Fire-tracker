@@ -54,3 +54,9 @@ L'interface a été méticuleusement pensée pour les petits écrans :
 ## 📝 Avertissement
 
 *Les calculs fournis par cet outil sont des estimations basées sur des modèles mathématiques théoriques à taux constants. Ils ne constituent en aucun cas des conseils financiers personnalisés. Les performances passées des marchés ne préjugent pas de leurs performances futures.*
+
+## 📜 Licence
+
+Ce projet est distribué sous la licence [PolyForm Noncommercial 1.0.0](LICENSE) : utilisation, modification et partage libres pour tout **usage non commercial**.
+
+**Usage commercial : contacte-moi pour une licence séparée** — [Funappi](https://github.com/funappi).
