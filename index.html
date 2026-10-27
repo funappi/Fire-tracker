@@ -91,6 +91,8 @@
         .credit { text-align: center; font-size: 12px; padding: 16px 0 8px; color: #9ca3af; }
         .credit a { position: relative; z-index: 1; display: inline-block; padding: 6px 4px; color: inherit; font-weight: 600; text-decoration: underline; transition: color .2s, text-shadow .2s; }
         .credit a:hover, .credit a:focus-visible { color: #eab308; text-shadow: 0 0 12px rgba(234, 179, 8, .6); }
+        /* Mobile / tablette / tactile : couleur du projet en permanence */
+        @media (hover: none), (max-width: 1024px) { .credit a { color: #eab308; text-shadow: 0 0 12px rgba(234, 179, 8, .6); } }
     </style>
 </head>
 <body class="p-4 md:p-8 max-w-7xl mx-auto">
