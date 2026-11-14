@@ -2,6 +2,26 @@
 
 FIRE Tracker Pro est une application web tout-en-un sous la forme d'un tableau de bord interactif. Elle est conçue pour aider les utilisateurs à planifier leur indépendance financière (FIRE - Financial Independence, Retire Early), suivre leurs flux de trésorerie (Cash Flow), et simuler la croissance de leur patrimoine via les intérêts composés.
 
+**[Ouvrir l'application](https://funappi.github.io/Fire-tracker/)**
+
+<p align="center">
+  <img src="docs/simulateur.png" alt="Simulateur FIRE : âge de liberté estimé, projections et horloge macro-économique" width="800">
+</p>
+
+<p align="center">
+  <img src="docs/cash-flow.png" alt="Menu Cash Flow : diagramme de flux des entrées et sorties" width="395">
+  <img src="docs/interets-composes.png" alt="Calculateur d'intérêts composés" width="395">
+</p>
+
+## 📖 Sommaire
+
+- [Fonctionnalités principales](#-fonctionnalités-principales)
+- [Technologies utilisées](#️-technologies-utilisées)
+- [Installation et utilisation](#-installation-et-utilisation)
+- [Compatibilité mobile](#-compatibilité-mobile)
+- [Avertissement](#-avertissement)
+- [Licence](#-licence)
+
 ## ✨ Fonctionnalités Principales
 
 L'application est divisée en trois modules distincts, accessibles via la barre de navigation supérieure :
